@@ -10,10 +10,10 @@ class BackupRestorePage extends StatefulWidget {
   const BackupRestorePage({super.key});
 
   @override
-  _BackupRestorePageState createState() => _BackupRestorePageState();
+  BackupRestorePageState createState() => BackupRestorePageState();
 }
 
-class _BackupRestorePageState extends State<BackupRestorePage> {
+class BackupRestorePageState extends State<BackupRestorePage> {
   final DatabaseHelper dbHelper = DatabaseHelper();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
