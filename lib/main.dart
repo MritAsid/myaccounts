@@ -31,7 +31,33 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      theme: isDarkMode ? ThemeData.dark() : ThemeData.light(),
+      theme: ThemeData(
+        fontFamily: 'Cairo', // تعيين خط كايرو كخط افتراضي
+        brightness: isDarkMode
+            ? Brightness.dark
+            : Brightness.light, // التحكم بالوضع المظلم/الفاتح
+        primarySwatch: Colors.cyan, // لون افتراضي للعناصر مثل AppBar
+        scaffoldBackgroundColor:
+            isDarkMode ? Colors.grey[900] : Colors.grey[100], // لون الخلفية
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(
+            fontFamily: 'Cairo',
+          ),
+          bodyMedium: TextStyle(fontFamily: 'Cairo'),
+          bodySmall: TextStyle(fontFamily: 'Cairo'),
+          headlineLarge: TextStyle(fontFamily: 'Cairo'),
+          headlineMedium: TextStyle(fontFamily: 'Cairo'),
+          headlineSmall: TextStyle(fontFamily: 'Cairo'),
+          titleLarge: TextStyle(fontFamily: 'Cairo'),
+          titleMedium: TextStyle(fontFamily: 'Cairo'),
+          titleSmall: TextStyle(fontFamily: 'Cairo'),
+          labelLarge: TextStyle(fontFamily: 'Cairo'),
+          labelMedium: TextStyle(fontFamily: 'Cairo'),
+          labelSmall: TextStyle(
+            fontFamily: 'Cairo',
+          ),
+        ),
+      ),
       locale: const Locale('ar', 'SA'),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -41,6 +67,12 @@ class _MyAppState extends State<MyApp> {
       supportedLocales: const [
         Locale('ar', 'SA'),
       ],
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(textScaleFactor: 1.0),
+          child: child!,
+        );
+      },
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: HomePage(
@@ -78,27 +110,28 @@ class _HomePageState extends State<HomePage> {
       children: const [
         Text(
           'مرحبًا',
-          style: TextStyle(fontSize: 24, color: Colors.white),
-        ),
-        SizedBox(
-          width: double.infinity,
-          child: CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.black26,
-            child: Icon(Icons.account_circle, size: 60, color: Colors.white),
+          style: TextStyle(
+            fontSize: 24,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        SizedBox(height: 10),
+        CircleAvatar(
+          radius: 35,
+          backgroundColor: Colors.black26,
+          child: Icon(Icons.account_circle, size: 70, color: Colors.white),
         ),
         SizedBox(height: 10),
         Text(
-          'قم بإضغط على "البيانات الشخصية" لااضافة بياناتك',
+          'اضغط على "البيانات الشخصية" لإضافة بياناتك',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            fontSize: 15.5,
+            fontSize: 16,
             fontWeight: FontWeight.w800,
             color: Color.fromARGB(255, 223, 221, 255),
           ),
-          textAlign: TextAlign.center,
         ),
-        SizedBox(height: 10),
       ],
     );
   }
@@ -111,23 +144,23 @@ class _HomePageState extends State<HomePage> {
         const Text(
           'مرحبًا',
           style: TextStyle(
-              fontSize: 24, color: Colors.white, fontWeight: FontWeight.w600),
-          textAlign: TextAlign.start,
-        ),
-        const SizedBox(
-          width: double.infinity,
-          child: CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.grey,
-            child: Icon(Icons.account_circle, size: 60, color: Colors.white),
+            fontSize: 22,
+            color: Colors.white,
+            fontWeight: FontWeight.w600,
           ),
+        ),
+        const SizedBox(height: 10),
+        const CircleAvatar(
+          radius: 35,
+          backgroundColor: Colors.grey,
+          child: Icon(Icons.account_circle, size: 70, color: Colors.white),
         ),
         const SizedBox(height: 10),
         Text(
           personalInfo['name'] ?? 'الاسم',
           style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
@@ -140,176 +173,221 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       key: _scaffoldKey,
+
       appBar: AppBar(
-        backgroundColor: Colors.cyan,
-        title: const Text(
-          ' حساباتي',
-          style: TextStyle(fontSize: 24.0, fontWeight: FontWeight.w800),
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu,
+            size: 30,
+            color: Colors.white,
+            shadows: [
+              Shadow(
+                color: Colors.black.withOpacity(0.3),
+                offset: const Offset(2, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+          onPressed: () {
+            _scaffoldKey.currentState?.openDrawer();
+          },
         ),
-        actions: const [
-          Icon(Icons.wallet_outlined, size: 40, color: Colors.tealAccent),
-          SizedBox(width: 28),
+        backgroundColor: Colors.cyan.shade600,
+        elevation: 4,
+        title: const Text(
+          'حساباتي',
+          style: TextStyle(
+            fontSize: 26,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.monitor_weight_rounded,
+                size: 35, color: Colors.white),
+            onPressed: () {
+              // إضافة وظيفة عند الضغط على أيقونة المحفظة
+            },
+          ),
+          const SizedBox(width: 16),
         ],
       ),
       drawer: Drawer(
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
               colors: [
-                Colors.cyan,
-                Color(0xFF0091A4),
-                Color(0xFF00707F),
+                Colors.cyan.shade900,
+                Colors.cyan.shade800,
+                Colors.cyan.shade700,
               ],
             ),
           ),
           child: Column(
             children: [
-              // اسم التطبيق مع زر الإغلاق
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 40, 16, 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'حساباتي', // اسم التطبيق
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
+              // الجزء العلوي الثابت (اسم التطبيق وحاوية الصورة والمعلومات)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // اسم التطبيق مع زر الإغلاق
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'حساباتي', // اسم التطبيق
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.redAccent,
+                            size: 30,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // خط فاصل أسفل اسم التطبيق
+                  const Divider(
+                    color: Colors.white,
+                    thickness: 3.5,
+                    height: 0,
+                  ),
+
+                  // حاوية الصورة مع المعلومات الشخصية
+                  Container(
+                    decoration: const BoxDecoration(
+                      image: DecorationImage(
+                        image: AssetImage('images/icon.png'), // صورة الخلفية
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      color: Colors.black
+                          .withOpacity(0.7), // طبقة شفافة فوق الصورة
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: FutureBuilder<Map<String, dynamic>?>(
+                        future: DatabaseHelper().getPersonalInfo(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(
+                                  color: Colors.white),
+                            );
+                          } else if (snapshot.hasError ||
+                              !snapshot.hasData ||
+                              snapshot.data!.isEmpty) {
+                            return _buildDefaultPersonalInfo();
+                          } else {
+                            final personalInfo = snapshot.data!;
+                            final name =
+                                personalInfo['name']?.toString().trim() ?? '';
+                            if (name.isEmpty) {
+                              return _buildDefaultPersonalInfo();
+                            } else {
+                              return _buildPersonalInfo(personalInfo);
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  // خط فاصل أسفل الصورة
+                  const Divider(
+                    color: Colors.white,
+                    thickness: 3.5,
+                    height: 0,
+                  ),
+                ],
+              ),
+              // الجزء القابل للتمرير (عناصر القائمة)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      _buildDrawerItem(
+                        icon: Icons.brightness_6,
+                        title:
+                            widget.isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن',
+                        onTap: widget.onThemeToggle,
+                      ),
+                      const Divider(
                         color: Colors.white,
+                        thickness: 1.5,
+                        height: 1,
+                        indent: 30,
+                        endIndent: 30,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.redAccent,
-                        size: 30,
+                      _buildDrawerItem(
+                        icon: Icons.my_library_books_rounded,
+                        title: 'البيانات الشخصية',
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const PersonalInfoPage()),
+                          );
+                          setState(() {});
+                        },
                       ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ),
-              // خط فاصل أسفل اسم التطبيق
-              const Divider(
-                color: Colors.white,
-                thickness: 3.5,
-                height: 0,
-              ),
-
-              // حاوية الصورة مع المعلومات الشخصية
-              Container(
-                decoration: const BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage('images/icon.png'), // صورة الخلفية
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  color: Colors.black.withOpacity(0.7), // طبقة شفافة فوق الصورة
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: FutureBuilder<Map<String, dynamic>?>(
-                    future: DatabaseHelper().getPersonalInfo(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                            child:
-                                CircularProgressIndicator(color: Colors.white));
-                      } else if (snapshot.hasError ||
-                          !snapshot.hasData ||
-                          snapshot.data!.isEmpty) {
-                        // حالة الخطأ أو عدم وجود بيانات
-                        return _buildDefaultPersonalInfo();
-                      } else {
-                        final personalInfo = snapshot.data!;
-                        final name = personalInfo['name']?.toString().trim() ??
-                            ''; // إزالة المسافات والتحقق من وجود حروف
-
-                        // إذا كان الاسم فارغًا أو يحتوي على مسافات فقط
-                        if (name.isEmpty) {
-                          return _buildDefaultPersonalInfo();
-                        } else {
-                          // إذا كان الاسم يحتوي على حروف
-                          return _buildPersonalInfo(personalInfo);
-                        }
-                      }
-                    },
+                      const Divider(
+                        color: Colors.white,
+                        thickness: 1.5,
+                        height: 1,
+                        indent: 30,
+                        endIndent: 30,
+                      ),
+                      _buildDrawerItem(
+                        icon: Icons.system_update,
+                        title: 'التحقق من التحديث',
+                        onTap: () => checkForUpdate(context),
+                      ),
+                      const Divider(
+                        color: Colors.white,
+                        thickness: 1.5,
+                        height: 1,
+                        indent: 30,
+                        endIndent: 30,
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: Text(
+                          'إصدار التطبيق: 1.0.0',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              // خط فاصل أسفل الصورة
-              const Divider(
-                color: Colors.white,
-                thickness: 3.5,
-                height: 0,
-              ),
-
-              // عناصر القائمة
-              _buildDrawerItem(
-                icon: Icons.brightness_6,
-                title: widget.isDarkMode ? 'الوضع الفاتح' : 'الوضع الداكن',
-                onTap: widget.onThemeToggle,
-              ),
-              const Divider(
-                  color: Colors.white,
-                  thickness: 1.5,
-                  height: 1,
-                  indent: 30,
-                  endIndent: 30),
-
-              _buildDrawerItem(
-                icon: Icons.my_library_books_rounded,
-                title: 'البيانات الشخصية',
-                onTap: () async {
-                  Navigator.pop(context);
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const PersonalInfoPage()),
-                  );
-                  setState(() {}); // تحديث الواجهة عند العودة
-                },
-              ),
-              const Divider(
-                  color: Colors.white,
-                  thickness: 1.5,
-                  height: 1,
-                  indent: 30,
-                  endIndent: 30),
-
-              _buildDrawerItem(
-                icon: Icons.system_update,
-                title: 'التحقق من التحديث',
-                onTap: () => checkForUpdate(context),
-              ),
-              const Divider(
-                  color: Colors.white,
-                  thickness: 1.5,
-                  height: 1,
-                  indent: 30,
-                  endIndent: 30),
-              // مسافة في الأسفل
-              const Spacer(),
-
-              const Text(
-                'إصدار التطبيق: 1.0.0',
-                style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 10),
             ],
           ),
         ),
       ),
+      //  ==============================
       body: Padding(
-        padding: const EdgeInsets.all(10.0),
+        padding: const EdgeInsets.all(14.0),
         child: GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
-          mainAxisSpacing: 16,
+          mainAxisSpacing: 10,
           children: [
             _buildIconCard(context, Icons.assignment_ind_outlined,
                 'إدارة الحسابات', Colors.blue),
@@ -319,7 +397,7 @@ class _HomePageState extends State<HomePage> {
                 context, Icons.search, 'البحث عن حساب', Colors.green),
             _buildIconCard(context, Icons.attach_money_sharp, 'حسابي الشخصي',
                 Colors.tealAccent),
-            _buildIconCard(context, Icons.backup_outlined, 'النسخ  والاستعاده',
+            _buildIconCard(context, Icons.backup_outlined, 'النسخ والاستعادة',
                 Colors.brown),
             _buildIconCard(
                 context, Icons.book_rounded, 'مذكرتي', Colors.redAccent),
@@ -332,8 +410,8 @@ class _HomePageState extends State<HomePage> {
   Widget _buildIconCard(
       BuildContext context, IconData icon, String label, Color color) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 6,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
           if (label == 'إدارة الحسابات') {
@@ -354,7 +432,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => const DailyAccountPage()));
-          } else if (label == 'النسخ  والاستعاده') {
+          } else if (label == 'النسخ والاستعادة') {
             Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -366,42 +444,59 @@ class _HomePageState extends State<HomePage> {
                     builder: (context) => const BackupRestorePage()));
           }
         },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 40, color: color),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              colors: [color.withOpacity(0.8), color],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 40, color: Colors.white),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  // دالة مساعدة لإنشاء عناصر الـ Drawer بشكل موحد
   Widget _buildDrawerItem({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(icon, color: Colors.white, size: 28),
+      leading: Icon(icon, color: Colors.white, size: 26),
       title: Text(
         title,
         style: const TextStyle(
           fontWeight: FontWeight.w600,
-          fontSize: 16,
+          fontSize: 18,
           color: Colors.white,
         ),
       ),
-      trailing:
-          const Icon(Icons.arrow_left, color: Colors.white70), // للغة العربية
+      trailing: const Icon(Icons.arrow_left, color: Colors.white70),
       onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       tileColor: Colors.transparent,
@@ -451,22 +546,61 @@ void checkForUpdate(BuildContext context) async {
       // ✅ عرض النافذة
       if (context.mounted) {
         // تأكد من أن `context` لا يزال متاحًا
+
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text("التحقق من رقم الإصدار"),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16), // حواف مستديرة
+            ),
+            title: Row(
+              children: const [
+                Icon(Icons.info_outline,
+                    color: Colors.blue, size: 24), // أيقونة بجانب العنوان
+                SizedBox(width: 8),
+                Text(
+                  "التحقق من رقم الإصدار",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("رقم الإصدار المحلي: $currentVersion"),
+                _buildVersionRow("رقم الإصدار المحلي:", currentVersion),
                 const SizedBox(height: 10),
-                Text("رقم الإصدار الجديد: $latestVersion"),
+                _buildVersionRow("رقم الإصدار الجديد:", latestVersion),
                 const SizedBox(height: 20),
                 if (currentVersion == latestVersion)
-                  const Text("✅ تطبيقك محدث إلى آخر إصدار")
+                  Row(
+                    children: const [
+                      Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "✅ تطبيقك محدث إلى آخر إصدار",
+                        style:
+                            TextStyle(color: Colors.green, fontFamily: 'Cairo'),
+                      ),
+                    ],
+                  )
                 else
-                  const Text("⚠️ هناك إصدار جديد متاح!"),
+                  Row(
+                    children: const [
+                      Icon(Icons.warning_amber_rounded,
+                          color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "⚠️ هناك إصدار جديد متاح!",
+                        style: TextStyle(
+                            color: Colors.orange, fontFamily: 'Cairo'),
+                      ),
+                    ],
+                  ),
               ],
             ),
             actions: [
@@ -478,21 +612,32 @@ void checkForUpdate(BuildContext context) async {
                       await launchUrl(Uri.parse(updateUrl));
                     } else {
                       if (context.mounted) {
-                        // تأكد من أن `context` لا يزال متاحًا
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content: Text("❌ فشل في فتح الرابط"),
+                            content: Text("❌ فشل في فتح الرابط",
+                                style: TextStyle(fontFamily: 'Cairo')),
                             backgroundColor: Colors.red,
                           ),
                         );
                       }
                     }
                   },
-                  child: const Text("موافق"),
+                  child: const Text(
+                    "تحديث الآن",
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               TextButton(
                 onPressed: () => Navigator.pop(context), // إغلاق النافذة
-                child: const Text("لاحقًا"),
+                child: Text(
+                  "لاحقًا",
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                  ),
+                ),
               ),
             ],
           ),
@@ -520,4 +665,28 @@ void checkForUpdate(BuildContext context) async {
       );
     }
   }
+}
+
+// ويدجت مخصص لعرض بيانات الإصدار
+Widget _buildVersionRow(String label, String value) {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          color: Colors.black54,
+          fontSize: 14,
+        ),
+      ),
+      Text(
+        value,
+        style: const TextStyle(
+          color: Colors.black87,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    ],
+  );
 }

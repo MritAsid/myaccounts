@@ -277,7 +277,7 @@ class BackupRestorePageState extends State<BackupRestorePage> {
       appBar: AppBar(
         title: const Text(
           'النسخ الاحتياطي والاستعادة',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         backgroundColor: Colors.cyan,
         elevation: 4,
@@ -287,8 +287,8 @@ class BackupRestorePageState extends State<BackupRestorePage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(
-                Icons.arrow_forward), // أيقونة العودة في الجهة اليمنى
+            icon: const Icon(Icons.arrow_forward,
+                color: Colors.white), // أيقونة العودة في الجهة اليمنى
             onPressed: () => Navigator.pop(context),
           ),
         ],
