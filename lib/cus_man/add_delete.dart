@@ -24,6 +24,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
   bool _showCustomersTable = true;
   bool _showSearchField = false;
   String _searchQuery = '';
+  // متغيرات لتخزين المبالغ
+  final Map<int, double> _customerOutstanding = {};
+  final Map<int, double> _agentOutstanding = {};
+
   final PageController _pageController = PageController();
 
   @override
@@ -59,18 +63,31 @@ class _AddDeletePageState extends State<AddDeletePage> {
     });
   }
 
-// تحميل العملاء
+  // تحميل العملاء
   void _loadCustomers() async {
     final data = await _dbHelper.getAllCustomers();
+
+    // تخزين المبالغ
+    for (var customer in data) {
+      final summary = await _dbHelper.getSummaryByName(customer['name']);
+      _customerOutstanding[customer['id']] = summary['outstanding'];
+    }
 
     setState(() {
       _customers = data;
     });
   }
 
-// تحميل الوكلاء
+  // تحميل الوكلاء
   void _loadAgents() async {
     final data = await _dbHelper.getAllAgents();
+
+    // تخزين المبالغ
+    for (var agent in data) {
+      final summary = await _dbHelper.getSummaryAgeentByName(agent['name']);
+      _agentOutstanding[agent['id']] = summary['outstanding'];
+    }
+
     setState(() {
       _agents = data;
     });
@@ -1442,7 +1459,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
     );
   }
 
-// انشا الجاول
+  // انشاء الجدول
   Widget _buildTable(List<Map<String, dynamic>> data, bool isCustomers) {
     final filteredList = data
         .where((item) =>
@@ -1450,10 +1467,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
         .toList();
 
     return Container(
-      margin: const EdgeInsets.all(3),
+      margin: const EdgeInsets.fromLTRB(4.0, 4.0, 4.0, 0.0),
       decoration: BoxDecoration(
         border: Border.all(
-          width: 2.0,
+          width: 3.0,
           color: isCustomers ? Colors.blue : Colors.orange,
         ),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -1513,6 +1530,16 @@ class _AddDeletePageState extends State<AddDeletePage> {
               itemCount: filteredList.length,
               itemBuilder: (context, index) {
                 final item = filteredList[index];
+                final outstanding = isCustomers
+                    ? _customerOutstanding[item['id']] ?? 0.0
+                    : _agentOutstanding[item['id']] ?? 0.0;
+
+                Color textColor = outstanding > 0
+                    ? Colors.red
+                    : outstanding < 0
+                        ? Colors.green
+                        : Colors.black;
+
                 return Container(
                   decoration: BoxDecoration(
                     color: index % 2 == 0 ? Colors.grey[100] : Colors.white,
@@ -1530,37 +1557,14 @@ class _AddDeletePageState extends State<AddDeletePage> {
                         flex: 3,
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 2.0),
-                          child: FutureBuilder<Map<String, dynamic>>(
-                            future: isCustomers
-                                ? _dbHelper.getSummaryByName(item['name'])
-                                : _dbHelper
-                                    .getSummaryAgeentByName(item['name']),
-                            builder: (context, snapshot) {
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return const Center(
-                                    child: CircularProgressIndicator());
-                              } else if (snapshot.hasError) {
-                                return Text('خطأ: ${snapshot.error}');
-                              } else {
-                                final outstanding =
-                                    snapshot.data!['outstanding'];
-                                Color textColor = outstanding > 0
-                                    ? Colors.red
-                                    : outstanding < 0
-                                        ? Colors.green
-                                        : Colors.black;
-                                return Text(
-                                  outstanding.toString(),
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor,
-                                  ),
-                                );
-                              }
-                            },
+                          child: Text(
+                            outstanding.toString(),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
+                            ),
                           ),
                         ),
                       ),
@@ -1637,18 +1641,18 @@ class _AddDeletePageState extends State<AddDeletePage> {
           title: const Text(
             'إدارة الحسابات',
             style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 24.0,
+              fontWeight: FontWeight.w800,
+              fontSize: 20.0,
               color: Colors.white,
             ),
           ),
           backgroundColor: const Color(0xFF00ACC1),
           elevation: 4,
           leading: Container(
-            margin: const EdgeInsets.all(6.0),
+            margin: const EdgeInsets.all(8.0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.3),
@@ -1658,7 +1662,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ],
             ),
             child: IconButton(
-              icon: const Icon(Icons.home, color: Colors.greenAccent, size: 30),
+              icon: const Icon(Icons.home, color: Colors.greenAccent, size: 25),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -1674,11 +1678,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
           ),
           actions: [
             Container(
-              margin:
-                  const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
+              margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.3),
@@ -1689,7 +1692,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
               child: IconButton(
                 icon: const Icon(Icons.account_balance_wallet,
-                    color: Colors.orange, size: 30),
+                    color: Colors.orange, size: 25),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -1701,11 +1704,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
             ),
             Container(
-              margin:
-                  const EdgeInsets.symmetric(horizontal: 6.0, vertical: 6.0),
+              margin: const EdgeInsets.all(8),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.grey.withOpacity(0.3),
@@ -1716,7 +1718,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
               child: IconButton(
                 icon: const Icon(Icons.search_rounded,
-                    color: Colors.green, size: 30),
+                    color: Colors.green, size: 25),
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -1734,7 +1736,17 @@ class _AddDeletePageState extends State<AddDeletePage> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.cyan,
+                color: const Color(0xFFE6E6E6),
+                border: const Border(
+                  bottom: BorderSide(color: Color(0xFF0BD4EE), width: 3),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.white.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.symmetric(vertical: 6.0),
               child: Row(
@@ -1766,7 +1778,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                               },
                             ),
                             contentPadding:
-                                const EdgeInsets.symmetric(vertical: 12.0),
+                                const EdgeInsets.symmetric(vertical: 0.0),
                           ),
                           onChanged: (value) {
                             setState(() {
@@ -1777,7 +1789,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
                       ),
                     ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14.0, vertical: 4.0),
                     child: Row(
                       children: [
                         GestureDetector(
@@ -1788,8 +1801,15 @@ class _AddDeletePageState extends State<AddDeletePage> {
                             decoration: BoxDecoration(
                               color: _showCustomersTable
                                   ? Colors.white
-                                  : Color(0xABFFFFFF),
+                                  : const Color(0xABFFFFFF),
                               borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.blue.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [
@@ -1798,15 +1818,16 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                   color: _showCustomersTable
                                       ? Colors.blue
                                       : Colors.grey,
-                                  size: 30,
+                                  size: 32,
                                 ),
                                 Text(
-                                  'العملاء',
+                                  ' العملاء ',
                                   style: TextStyle(
+                                    fontSize: 10.0,
                                     color: _showCustomersTable
                                         ? Colors.blue
                                         : Colors.grey,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ],
@@ -1822,8 +1843,15 @@ class _AddDeletePageState extends State<AddDeletePage> {
                             decoration: BoxDecoration(
                               color: !_showCustomersTable
                                   ? Colors.white
-                                  : Color(0xABFFFFFF),
+                                  : const Color(0xABFFFFFF),
                               borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.orange.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [
@@ -1832,15 +1860,16 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                   color: !_showCustomersTable
                                       ? Colors.orange
                                       : Colors.grey,
-                                  size: 30,
+                                  size: 32,
                                 ),
                                 Text(
                                   'الموردين',
                                   style: TextStyle(
+                                    fontSize: 10.0,
                                     color: !_showCustomersTable
                                         ? Colors.orange
                                         : Colors.grey,
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ],
@@ -1866,47 +1895,110 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 10),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF00ACC1),
                 border: Border(
                   top: BorderSide(
-                    width: 2.6,
-                    color: _showCustomersTable ? Colors.blue : Colors.orange,
-                  ),
+                      color: _showCustomersTable ? Colors.blue : Colors.orange,
+                      width: 2),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.search_sharp,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                    onPressed: () {
+                  // أيقونة البحث
+                  GestureDetector(
+                    onTap: () {
                       setState(() {
                         _showSearchField = !_showSearchField;
                         _searchQuery = '';
                       });
                     },
-                  ),
-                  FloatingActionButton(
-                    onPressed: _showAddAccountDialog,
-                    backgroundColor: Colors.white,
-                    mini: true,
-                    child: const Icon(Icons.add, color: Color(0xFF00ACC1)),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.info_outline,
-                      color: Colors.white,
-                      size: 30,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 100),
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: _showSearchField
+                            ? Colors.white
+                            : const Color(0xABFFFFFF),
+                        borderRadius: BorderRadius.circular(6),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.search_sharp,
+                        color: _showSearchField ? Colors.green : Colors.grey,
+                        size: 25,
+                      ),
                     ),
-                    onPressed: _showCustomersTable
+                  ),
+
+                  GestureDetector(
+                    onTap: _showAddAccountDialog,
+                    child: Container(
+                      width: 45, // زيادة العرض
+                      height: 45, // زيادة الارتفاع
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.white.withOpacity(0.2),
+                            blurRadius: 6,
+                            offset: const Offset(-4, -4),
+                          ),
+                        ],
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.add_circle,
+                          color: Colors
+                              .greenAccent, // لون الأيقونة أبيض لتتناسب مع التدرج
+                          size: 40, // حجم أكبر للأيقونة
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // أيقونة المعلومات
+                  GestureDetector(
+                    onTap: _showCustomersTable
                         ? _showTotalSummaryDialog
                         : _showTotalAgeentsSummaryDialog,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 100),
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.red.withOpacity(0.3),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.info_outline,
+                        color:
+                            _showCustomersTable ? Colors.blue : Colors.orange,
+                        size: 25,
+                      ),
+                    ),
                   ),
                 ],
               ),
