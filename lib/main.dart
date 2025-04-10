@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'database/database_helper.dart';
 import 'cus_man/add_delete.dart';
 import 'cus_man/add_transaction.dart';
+// import 'cus_man/translithelp.dart';
 import 'cus_man/search.dart';
 import 'dily_cont/daily_account_page.dart';
 import 'backjes/backjes.dart';
@@ -437,12 +438,13 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => const BackupRestorePage()));
-          } else if (label == 'مذكرتي') {
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => const BackupRestorePage()));
           }
+          // else if (label == 'مذكرتي') {
+          //   Navigator.push(
+          //       context,
+          //       MaterialPageRoute(
+          //           builder: (context) => AddTransactionPageTow()));
+          // }
         },
         child: Container(
           decoration: BoxDecoration(
