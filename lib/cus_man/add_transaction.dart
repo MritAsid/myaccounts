@@ -13,33 +13,45 @@ class AddTransactionPage extends StatefulWidget {
 
 class AddTransactionPageState extends State<AddTransactionPage> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _agentNameController = TextEditingController();
+
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _detailsController = TextEditingController();
+  final FocusNode _agentNameFocusNode = FocusNode();
   final FocusNode _nameFocusNode = FocusNode();
   final FocusNode _amountFocusNode = FocusNode();
   final FocusNode _detailsFocusNode = FocusNode();
 
-  final TextEditingController _agentNameController = TextEditingController();
-  final FocusNode _agentNameFocusNode = FocusNode();
-  int? selectedAgentId; // ID الوكيل المختار
-  List<Map<String, dynamic>> matchingAgents = []; // قائمة الوكلاء المطابقين
-  String _selectedView = 'customers'; // عرض العمليات الحالية (عملاء أو وكلاء)
   final PageController _pageController = PageController(initialPage: 0);
   int _currentPage = 0; // الصفحة الحالية
-  String _transactionType = '';
+
+  bool _isSearchActive = false;
+  String _searchQuery = ''; // لتخزين نص البحث
+
+  int? selectedAgentId; // ID الوكيل المختار
   int? selectedClientId; // ID العميل المختار
-  List<Map<String, dynamic>> matchingClients = []; // قائمة الأسماء المطابقة
+
+  String _selectedView = 'customers'; // عرض العمليات الحالية (عملاء أو وكلاء)
+  String _transactionType = ''; //  تخزين نوع العمليه
+
+  List<Map<String, dynamic>> matchingAgents =
+      []; // قائمة اسماء الوكلاء المطابقين
+  List<Map<String, dynamic>> matchingClients =
+      []; // قائمة اسماء العملاء المطابقة
+
   DateTime? _selectedDate; // للتاريخ المحدد (اليوم، الأمس، يوم محدد)
   DateTime? _startDate; // لنطاق التاريخ (بداية الفترة)
   DateTime? _endDate; // لنطاق التاريخ (نهاية الفترة)
-  List<Map<String, dynamic>> _recentTransactions = [];
-  int number_opritor = 0;
-// // =========  تفاعلات الواجهة الواجهه  ===========
+  List<Map<String, dynamic>> _recentCustomerTransactions = [];
+  List<Map<String, dynamic>> _recentAgentTransactions = [];
+
+  // // =========  تفاعلات الواجهة الواجهه  ===========
   @override
   void initState() {
     super.initState();
 
     _fetchTransactionsByDate(DateTime.now());
+    _fetchAgentTransactionsByDate(DateTime.now());
     // تحريك المؤشر إلى نهاية النص عند التركيز على الحقل
     //   _nameFocusNode.addListener(() {
     //     if (_nameFocusNode.hasFocus) {
@@ -105,129 +117,242 @@ class AddTransactionPageState extends State<AddTransactionPage> {
 // ==================بداية===================
 // ============ تصفيت العرض =================
 // ============================================
-  // جلب العمليات  للعملاء بناءً على التاريخ المحدد
-  Future<void> _fetchTransactionsByDate(DateTime date) async {
-    final transactions = await DatabaseHelper().getOperationsByDate(date);
-    setState(() {
-      _recentTransactions = transactions;
-      _selectedDate = date;
-    });
+
+// دالة مساعدة لإنشاء عنصر خيار أنيق
+  Widget _buildOptionTile({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 90,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          // mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(
+              icon,
+              size: 25,
+              color: Colors.cyan,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              text,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-//  عرض خيارات العرض
   Future<void> _selectDate(BuildContext context) async {
     showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text(
-            'اختر الفترة الزمنية',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: const Text('يوم محدد'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  await _selectDateViwe(context);
-                },
-              ),
-              ListTile(
-                title: const Text('كل العمليات'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  setState(() {
-                    _selectedDate = null;
-                    _startDate = null;
-                    _endDate = null;
-                  });
-                  await _fetchAllTransactions();
-                },
-              ),
-              ListTile(
-                title: const Text('اليوم'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  setState(() {
-                    _selectedDate = DateTime.now();
-                    _startDate = null;
-                    _endDate = null;
-                  });
-                  await _fetchTransactionsByDate(DateTime.now());
-                },
-              ),
-              ListTile(
-                title: const Text('الأمس'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  setState(() {
-                    _selectedDate =
-                        DateTime.now().subtract(const Duration(days: 1));
-                    _startDate = null;
-                    _endDate = null;
-                  });
-                  await _fetchTransactionsByDate(
-                    DateTime.now().subtract(const Duration(days: 1)),
-                  );
-                },
-              ),
-              ListTile(
-                title: const Text('الأسبوع الحالي'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final now = DateTime.now();
-                  final startOfWeek =
-                      now.subtract(Duration(days: now.weekday - 1));
-                  setState(() {
-                    _selectedDate = null;
-                    // _startDate = startOfWeek;
-                    _startDate = now.subtract(Duration(days: now.weekday));
-                    _endDate = now;
-                  });
-                  await _fetchTransactionsByWeek();
-                },
-              ),
-              ListTile(
-                title: const Text('الشهر الحالي'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final now = DateTime.now();
-                  final startOfMonth = DateTime(now.year, now.month, 1);
-                  final endOfMonth = DateTime(now.year, now.month + 1, 0);
-                  setState(() {
-                    _selectedDate = null;
-                    _startDate = startOfMonth;
-                    _endDate = endOfMonth;
-                  });
-                  await _fetchTransactionsByMonth(now);
-                },
-              ),
-              ListTile(
-                title: const Text('الشهر الماضي'),
-                onTap: () async {
-                  Navigator.pop(context);
-                  final now = DateTime.now();
-                  final lastMonth = DateTime(now.year, now.month - 1, 1);
-                  final startOfMonth =
-                      DateTime(lastMonth.year, lastMonth.month, 1);
-                  final endOfMonth =
-                      DateTime(lastMonth.year, lastMonth.month + 1, 0);
-                  setState(() {
-                    _selectedDate = null;
-                    _startDate = startOfMonth;
-                    _endDate = endOfMonth;
-                  });
-                  await _fetchTransactionsByMonth(lastMonth);
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
+        context: context,
+        builder: (context) {
+          return Dialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.0),
+            ),
+            elevation: 8, // إضافة ظل للنافذة
+            child: Container(
+                decoration: BoxDecoration(
+                  // color: Colors.white,
+                  borderRadius: BorderRadius.circular(16.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Container(
+                    width: double.maxFinite,
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    decoration: const BoxDecoration(
+                      color: Colors.cyan,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(16.0),
+                        topRight: Radius.circular(16.0),
+                      ),
+                    ),
+                    child: const Text(
+                      'اختر الفترة الزمنية',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Container(
+                    width: double.maxFinite,
+                    padding: const EdgeInsets.all(6),
+                    color: const Color(0xFFEAEAEA),
+                    child: Wrap(
+                      spacing: 10.0, // المسافة الأفقية بين الخيارات
+                      runSpacing: 18.0, // المسافة العمودية بين الصفوف
+                      alignment: WrapAlignment.spaceAround, // محاذاة الخيارات
+                      children: [
+                        _buildOptionTile(
+                          icon: Icons.calendar_today,
+                          text: 'يوم محدد',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            _selectedView == 'customers'
+                                ? await _selectDateViwe(context)
+                                : await _selectAgentDateViw(context);
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.today,
+                          text: 'اليوم',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            setState(() {
+                              _selectedDate = DateTime.now();
+                              _startDate = null;
+                              _endDate = null;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchTransactionsByDate(DateTime.now())
+                                : await _fetchAgentTransactionsByDate(
+                                    DateTime.now());
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.arrow_back,
+                          text: 'الأمس',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            setState(() {
+                              _selectedDate = DateTime.now()
+                                  .subtract(const Duration(days: 1));
+                              _startDate = null;
+                              _endDate = null;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchTransactionsByDate(
+                                    DateTime.now()
+                                        .subtract(const Duration(days: 1)),
+                                  )
+                                : await _fetchAgentTransactionsByDate(
+                                    DateTime.now()
+                                        .subtract(const Duration(days: 1)),
+                                  );
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.calendar_view_week,
+                          text: 'الأسبوع الحالي',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final now = DateTime.now();
+                            final startOfWeek =
+                                now.subtract(Duration(days: now.weekday));
+                            setState(() {
+                              _selectedDate = null;
+                              _startDate = startOfWeek;
+                              _endDate = now;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchTransactionsByWeek()
+                                : await _fetchAgentTransactionsByWeek();
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.calendar_month,
+                          text: 'الشهر الحالي',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final now = DateTime.now();
+                            final startOfMonth =
+                                DateTime(now.year, now.month, 1);
+                            final endOfMonth =
+                                DateTime(now.year, now.month + 1, 0);
+                            setState(() {
+                              _selectedDate = null;
+                              _startDate = startOfMonth;
+                              _endDate = endOfMonth;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchTransactionsByMonth(now)
+                                : await _fetchAgentTransactionsByMonth(now);
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.calendar_month_outlined,
+                          text: 'الشهر الماضي',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            final now = DateTime.now();
+                            final lastMonth =
+                                DateTime(now.year, now.month - 1, 1);
+                            final startOfMonth =
+                                DateTime(lastMonth.year, lastMonth.month, 1);
+                            final endOfMonth = DateTime(
+                                lastMonth.year, lastMonth.month + 1, 0);
+                            setState(() {
+                              _selectedDate = null;
+                              _startDate = startOfMonth;
+                              _endDate = endOfMonth;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchTransactionsByMonth(lastMonth)
+                                : await _fetchAgentTransactionsByMonth(
+                                    lastMonth);
+                          },
+                        ),
+                        _buildOptionTile(
+                          icon: Icons.list_alt,
+                          text: 'كل العمليات',
+                          onTap: () async {
+                            Navigator.pop(context);
+                            setState(() {
+                              _selectedDate = null;
+                              _startDate = null;
+                              _endDate = null;
+                            });
+                            _selectedView == 'customers'
+                                ? await _fetchAllTransactions()
+                                : await _fetchAllAgentTransactions();
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  )
+                ])),
+          );
+        });
   }
 
 //  فتح جدول اختيار التاريخ للعملاء
@@ -243,7 +368,16 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     }
   }
 
-// جلب العمليات للأسبوع الحالي
+// جلب العمليات للعملاء بناءً على التاريخ المحدد
+  Future<void> _fetchTransactionsByDate(DateTime date) async {
+    final transactions = await DatabaseHelper().getOperationsByDate(date);
+    setState(() {
+      _recentCustomerTransactions = transactions;
+      _selectedDate = date;
+    });
+  }
+
+// جلب العمليات للأسبوع الحالي للعملاء
   Future<void> _fetchTransactionsByWeek() async {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday));
@@ -252,12 +386,12 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       now,
     );
     setState(() {
-      _recentTransactions = transactions;
+      _recentCustomerTransactions = transactions;
       _selectedDate = null; // لا يوجد تاريخ محدد
     });
   }
 
-// جلب العمليات للشهر الحالي أو شهر معين
+// جلب العمليات للشهر الحالي أو شهر معين للعملاء
   Future<void> _fetchTransactionsByMonth(DateTime date) async {
     final startOfMonth = DateTime(date.year, date.month, 1);
     final endOfMonth = DateTime(date.year, date.month + 1, 0);
@@ -266,42 +400,23 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       endOfMonth,
     );
     setState(() {
-      _recentTransactions = transactions;
+      _recentCustomerTransactions = transactions;
       _selectedDate = null; // لا يوجد تاريخ محدد
     });
   }
 
-  // جلب كل العمليات
+  // جلب كل العمليات  للعملاء
   Future<void> _fetchAllTransactions() async {
     final transactions = await DatabaseHelper().getAllOperations();
     setState(() {
-      _recentTransactions = transactions;
+      _recentCustomerTransactions = transactions;
       _selectedDate = null; // لا يوجد تاريخ محدد
     });
   }
 
-// جلب العمليات للوكلاء بناءً على التاريخ المحدد
-  Future<void> _fetchAgentTransactionsByDate(DateTime date) async {
-    final transactions = await DatabaseHelper().getAgentOperationsByDate(date);
-    setState(() {
-      _recentTransactions = transactions;
-      _selectedDate = date;
-    });
-  }
-
-  Future<void> _selectAgentDateViw(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      await _fetchAgentTransactionsByDate(picked);
-    }
-  }
-
-// فتح جدول اختيار التاريخ للوكلاء
+// ===================================
+// ===================================
+/* //  عرض خيارات العرض للعملاء
   Future<void> _selectAgentDate(BuildContext context) async {
     showDialog(
         context: context,
@@ -332,10 +447,147 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                   await _fetchAllAgentTransactions();
                 },
               ),
+              ListTile(
+                title: const Text('اليوم'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedDate = DateTime.now();
+                    _startDate = null;
+                    _endDate = null;
+                  });
+                  await _fetchAgentTransactionsByDate(DateTime.now());
+                },
+              ),
+              ListTile(
+                title: const Text('الأمس'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  setState(() {
+                    _selectedDate =
+                        DateTime.now().subtract(const Duration(days: 1));
+                    _startDate = null;
+                    _endDate = null;
+                  });
+                  await _fetchAgentTransactionsByDate(
+                    DateTime.now().subtract(const Duration(days: 1)),
+                  );
+                },
+              ),
+              ListTile(
+                title: const Text('الأسبوع الحالي'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final now = DateTime.now();
+                  final startOfWeek = now.subtract(Duration(days: now.weekday));
+                  setState(() {
+                    _selectedDate = null;
+                    _startDate = startOfWeek;
+                    _endDate = now;
+                  });
+                  await _fetchAgentTransactionsByWeek();
+                },
+              ),
+              ListTile(
+                title: const Text('الشهر الحالي'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final now = DateTime.now();
+                  final startOfMonth = DateTime(now.year, now.month, 1);
+                  final endOfMonth = DateTime(now.year, now.month + 1, 0);
+                  setState(() {
+                    _selectedDate = null;
+                    _startDate = startOfMonth;
+                    _endDate = endOfMonth;
+                  });
+                  await _fetchAgentTransactionsByMonth(now);
+                },
+              ),
+              ListTile(
+                title: const Text('الشهر الماضي'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final now = DateTime.now();
+                  final lastMonth = DateTime(now.year, now.month - 1, 1);
+                  final startOfMonth =
+                      DateTime(lastMonth.year, lastMonth.month, 1);
+                  final endOfMonth =
+                      DateTime(lastMonth.year, lastMonth.month + 1, 0);
+                  setState(() {
+                    _selectedDate = null;
+                    _startDate = startOfMonth;
+                    _endDate = endOfMonth;
+                  });
+                  await _fetchAgentTransactionsByMonth(lastMonth);
+                },
+              ),
             ]),
           );
         });
   }
+ */
+// فتح جدول اختيار التاريخ للوكلاء
+  Future<void> _selectAgentDateViw(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      await _fetchAgentTransactionsByDate(picked);
+    }
+  }
+
+// جلب العمليات للوكلاء بناءً على التاريخ المحدد
+  Future<void> _fetchAgentTransactionsByDate(DateTime date) async {
+    final transactions = await DatabaseHelper().getAgentOperationsByDate(date);
+    setState(() {
+      _recentAgentTransactions = transactions;
+      _selectedDate = date;
+    });
+  }
+
+// جلب العمليات للأسبوع الحالي للوكلاء
+  Future<void> _fetchAgentTransactionsByWeek() async {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday));
+    final transactions = await DatabaseHelper().getAgentOperationsByDateRange(
+      startOfWeek,
+      now,
+    );
+    setState(() {
+      _recentAgentTransactions = transactions;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+// جلب العمليات للشهر الحالي أو شهر معين للوكلاء
+  Future<void> _fetchAgentTransactionsByMonth(DateTime date) async {
+    final startOfMonth = DateTime(date.year, date.month, 1);
+    final endOfMonth = DateTime(date.year, date.month + 1, 0);
+    final transactions = await DatabaseHelper().getAgentOperationsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+    setState(() {
+      _recentAgentTransactions = transactions;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+  // جلب كل العمليات للوكلاء
+  Future<void> _fetchAllAgentTransactions() async {
+    final transactions = await DatabaseHelper().getAgentAllOperations();
+    setState(() {
+      _recentAgentTransactions = transactions;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+// ==================بداية===================
+// ============ اضافة عمليه  ================
+// ============================================
 
 //  ========= نافذة اختيار  الاضافة لعميل او لوكيل  ===========
   void _showAddOperationDialog() {
@@ -402,15 +654,6 @@ class AddTransactionPageState extends State<AddTransactionPage> {
         ),
       ),
     );
-  }
-
-  // جلب كل العمليات
-  Future<void> _fetchAllAgentTransactions() async {
-    final transactions = await DatabaseHelper().getAgentAllOperations();
-    setState(() {
-      _recentTransactions = transactions;
-      _selectedDate = null; // لا يوجد تاريخ محدد
-    });
   }
 
 // ===============   نافذة اضافة عملية لعميل ==================
@@ -502,6 +745,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                           child: TextFormField(
                             controller: _nameController,
                             focusNode: _nameFocusNode,
+                            autofocus: true,
                             textInputAction: TextInputAction.next,
                             decoration: const InputDecoration(
                               border: OutlineInputBorder(
@@ -850,6 +1094,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                             child: TextFormField(
                               controller: _agentNameController,
                               focusNode: _agentNameFocusNode,
+                              autofocus: true,
                               textInputAction: TextInputAction.next,
                               decoration: const InputDecoration(
                                 border: OutlineInputBorder(
@@ -1112,6 +1357,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
 
     await fetchTransactions();
+    _showSuccessMessage('تم حفظ العملية بنجاح');
 
     _pageController.animateToPage(0,
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -1167,12 +1413,32 @@ class AddTransactionPageState extends State<AddTransactionPage> {
         _endDate!,
       );
       setState(() {
-        _recentTransactions = transactions;
+        _recentCustomerTransactions = transactions;
         _selectedDate = null; // إعادة تعيين التاريخ المحدد
       });
     } else {
       // إذا لم يتم تحديد أي تاريخ أو نطاق زمني
       await _fetchAllTransactions();
+    }
+  }
+
+  Future<void> fetchAgentTransactions() async {
+    if (_selectedDate != null) {
+      // إذا كانت هناك تاريخ محدد (_selectedDate)
+      await _fetchAgentTransactionsByDate(_selectedDate!);
+    } else if (_startDate != null && _endDate != null) {
+      // إذا كان هناك نطاق زمني محدد (_startDate و _endDate)
+      final transactions = await DatabaseHelper().getAgentOperationsByDateRange(
+        _startDate!,
+        _endDate!,
+      );
+      setState(() {
+        _recentAgentTransactions = transactions;
+        _selectedDate = null; // إعادة تعيين التاريخ المحدد
+      });
+    } else {
+      // إذا لم يتم تحديد أي تاريخ أو نطاق زمني
+      await _fetchAllAgentTransactions();
     }
   }
 
@@ -1503,11 +1769,9 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       if (rowsAffected > 0) {
         // تحديث العمليات بناءً على نوع العرض الحالي
         if (_selectedView == 'customers') {
-          // _refreshTransactions(_selectedDate!); // تحديث عمليات العملاء
           await fetchTransactions();
         } else if (_selectedView == 'agents') {
-          await _fetchAgentTransactionsByDate(
-              _selectedDate!); // تحديث عمليات الوكلاء
+          await fetchAgentTransactions(); // تحديث عمليات الوكلاء
         }
         _showSuccessMessage('تم حذف العملية بنجاح');
       } else {
@@ -1845,8 +2109,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                                     if (_selectedView == 'customers') {
                                       await fetchTransactions();
                                     } else if (_selectedView == 'agents') {
-                                      await _fetchAgentTransactionsByDate(
-                                          _selectedDate!);
+                                      await fetchAgentTransactions();
                                     }
 
                                     _showSuccessMessage(
@@ -1892,167 +2155,178 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-  // دالة لإنشاء الجدول
   Widget _buildTable(String view, Color borderColor) {
-    int number_opritorHlp = 0;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(4.0, 4.0, 4.0, 0.0),
-      decoration: BoxDecoration(
-        border: Border.all(
-          width: 3.0,
-          color: borderColor,
-        ),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      ),
-      child: Column(
-        children: [
-          // العنوان
-          Container(
+    // تحديد البيانات بناءً على العرض الحالي
+    final List<Map<String, dynamic>> transactions = view == 'customers'
+        ? _recentCustomerTransactions
+        : _recentAgentTransactions;
+
+    // تصفية البيانات بناءً على نص البحث
+    final filteredTransactions = _filterTransactions(transactions, view);
+
+    return Column(
+      children: [
+        // حقل البحث (إذا كان مفعلًا)
+        if (_isSearchActive) _buildSearchField(),
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.fromLTRB(4.0, 4.0, 4.0, 0.0),
             decoration: BoxDecoration(
-              color: borderColor,
+              border: Border.all(
+                width: 3.0,
+                color: borderColor,
+              ),
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(6)),
+                  const BorderRadius.vertical(top: Radius.circular(12)),
             ),
-            padding: const EdgeInsets.all(14),
-            child: Row(
+            child: Column(
               children: [
+                // العنوان
+                Container(
+                  decoration: BoxDecoration(
+                    color: borderColor,
+                    borderRadius:
+                        const BorderRadius.vertical(top: Radius.circular(6)),
+                  ),
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: Text(
+                          view == 'customers' ? 'اسم العميل' : 'اسم المورد',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        flex: 3,
+                        child: Text(
+                          'المبلغ',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      const Expanded(
+                        flex: 2,
+                        child: Text(
+                          'تفاصيل',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // المحتوى
                 Expanded(
-                  flex: 5,
-                  child: Text(
-                    view == 'customers' ? 'اسم العميل' : 'اسم المورد',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 3,
-                  child: Text(
-                    'المبلغ',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-                const Expanded(
-                  flex: 2,
-                  child: Text(
-                    'تفاصيل',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14.5,
-                    ),
-                  ),
+                  child: filteredTransactions.isEmpty
+                      ? const Center(
+                          child: Text(
+                            "لا توجد نتائج",
+                            style: TextStyle(fontSize: 18, color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: filteredTransactions.length,
+                          itemBuilder: (context, index) {
+                            final transaction = filteredTransactions[index];
+                            return Container(
+                              decoration: BoxDecoration(
+                                color: index % 2 == 0
+                                    ? Colors.grey[100]
+                                    : Colors.white,
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: borderColor,
+                                    width: 2.0,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  // عمود الاسم
+                                  Expanded(
+                                    flex: 5,
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 13,
+                                        horizontal: 4,
+                                      ),
+                                      child: Text(
+                                        transaction[view == 'customers'
+                                                ? 'client_name'
+                                                : 'agent_name'] ??
+                                            'غير معروف',
+                                        textAlign: TextAlign.start,
+                                        style: const TextStyle(
+                                          fontSize: 14.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // عمود المبلغ
+                                  Expanded(
+                                    flex: 3,
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        border: Border(
+                                          left: BorderSide(
+                                            color: borderColor,
+                                            width: 2.0,
+                                          ),
+                                          right: BorderSide(
+                                            color: borderColor,
+                                            width: 2.0,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 18,
+                                          horizontal: 4,
+                                        ),
+                                        child: Text(
+                                          transaction['amount']?.toString() ??
+                                              'غير معروف',
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(
+                                            fontSize: 14.5,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // عمود معلومات
+                                  Expanded(
+                                    flex: 2,
+                                    child: _buildInfoCell(transaction),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                 ),
               ],
             ),
           ),
-          // المحتوى
-
-          Expanded(
-            child: _recentTransactions.isEmpty
-                ? const Center(
-                    child: Text(
-                      "لا توجد عمليات للتاريخ المحدد",
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _recentTransactions.length,
-                    itemBuilder: (context, index) {
-                      final transaction = _recentTransactions[index];
-                      if (_selectedView == 'customers') {
-                        number_opritorHlp += 1;
-                      }
-                      number_opritor = number_opritorHlp;
-                      return Container(
-                        decoration: BoxDecoration(
-                          color:
-                              index % 2 == 0 ? Colors.grey[100] : Colors.white,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: borderColor,
-                              width: 2.0,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            // عمود الاسم
-                            Expanded(
-                              flex: 5,
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 13,
-                                  horizontal: 4,
-                                ),
-                                child: Text(
-                                  transaction[view == 'customers'
-                                          ? 'client_name'
-                                          : 'agent_name'] ??
-                                      'غير معروف',
-                                  textAlign: TextAlign.start,
-                                  style: const TextStyle(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // عمود المبلغ
-                            Expanded(
-                              flex: 3,
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    left: BorderSide(
-                                      color: borderColor,
-                                      width: 2.0,
-                                    ),
-                                    right: BorderSide(
-                                      color: borderColor,
-                                      width: 2.0,
-                                    ),
-                                  ),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 18,
-                                    horizontal: 4,
-                                  ),
-                                  child: Text(
-                                    transaction['amount']?.toString() ??
-                                        'غير معروف',
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 14.5,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            // عمود معلومات
-                            Expanded(
-                              flex: 2,
-                              child: _buildInfoCell(transaction),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -2063,24 +2337,25 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     String boxTrens =
         _selectedView == 'customers' ? 'صندوق العملاء' : 'صندوق الموردين';
 
-    if (_selectedView == 'agents') {
-      _selectedDate != null;
-      summary = await DatabaseHelper().getAgentSummaryByDate(_selectedDate!);
-    } else {
-      // إذا كان هناك تاريخ محدد (يوم محدد، اليوم، الأمس)
-      if (_selectedDate != null) {
-        summary = await DatabaseHelper().getSummaryByDateDey(_selectedDate!);
-      }
-      // إذا كان هناك نطاق تاريخ (الأسبوع الحالي، الشهر الحالي، الشهر الماضي)
-      else if (_startDate != null && _endDate != null) {
-        summary = await DatabaseHelper()
-            .getSummaryByDateRange(_startDate!, _endDate!);
-      }
-      // إذا تم اختيار "كل العمليات"
-      else {
-        summary = await DatabaseHelper().getSummaryForAllOperations();
-      }
+    if (_selectedDate != null) {
+      summary = _selectedView == 'customers'
+          ? await DatabaseHelper().getSummaryByDateDey(_selectedDate!)
+          : await DatabaseHelper().getAgentSummaryByDate(_selectedDate!);
     }
+    // إذا كان هناك نطاق تاريخ (الأسبوع الحالي، الشهر الحالي، الشهر الماضي)
+    else if (_startDate != null && _endDate != null) {
+      summary = _selectedView == 'customers'
+          ? await DatabaseHelper().getSummaryByDateRange(_startDate!, _endDate!)
+          : await DatabaseHelper()
+              .getSummaryAgentByDateRange(_startDate!, _endDate!);
+    }
+    // إذا تم اختيار "كل العمليات"
+    else {
+      summary = _selectedView == 'customers'
+          ? await DatabaseHelper().getSummaryForAllOperations()
+          : await DatabaseHelper().getSummaryAgentForAllOperations();
+    }
+    // }
 
     // التحقق من أن الـ BuildContext لا يزال صالحًا
     if (!mounted) return;
@@ -2136,13 +2411,13 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                 ),
               const SizedBox(height: 10.0),
               // number_opritorHlp
-              Text(
-                number_opritor.toString(),
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
+              // Text(
+              //   number_opritor.toString(),
+              //   style: const TextStyle(
+              //     fontWeight: FontWeight.bold,
+              //     fontSize: 18,
+              //   ),
+              // ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 10.0),
                 child: Table(
@@ -2262,6 +2537,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: const Color(0xFFF5F6FA),
         appBar: AppBar(
           title: const Text(
@@ -2445,10 +2721,12 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                       ),
 
                     GestureDetector(
-                      onTap: () => _currentPage == 0
-                          ? _selectDate(
-                              context) // اختيار التاريخ لعمليات العملاء
-                          : _selectAgentDate(context),
+                      onTap: () =>
+                          //  _currentPage == 0
+                          // ?
+                          _selectDate(context),
+                      // اختيار التاريخ لعمليات العملاء
+                      // : _selectAgentDate(context),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -2584,9 +2862,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                     if (_currentPage == 0) {
                       fetchTransactions();
                     } else {
-                      _startDate = null;
-                      _endDate = null;
-                      _fetchAgentTransactionsByDate(DateTime.now());
+                      fetchAgentTransactions();
                     }
                   },
                   children: [
@@ -2612,9 +2888,19 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    // أيقونة البحث
+// أيقونة البحث
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        setState(() {
+                          // _isSearchActive = true; // تفعيل عرض حقل البحث
+                          _isSearchActive =
+                              !_isSearchActive; // تفعيل عرض حقل البحث
+                        });
+                        // // تركيز لوحة المفاتيح على حقل البحث بعد ظهوره
+                        // Future.delayed(Duration(milliseconds: 100), () {
+                        //   FocusScope.of(context).requestFocus(_searchFocusNode);
+                        // });
+                      },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 100),
                         padding: const EdgeInsets.all(6),
@@ -2631,12 +2917,14 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                         ),
                         child: const Icon(
                           Icons.search_sharp,
+                          // _isSearchActive
+                          // ? Icons.close_sharp
+                          // : Icons.search_sharp,
                           color: Colors.green,
                           size: 25,
                         ),
                       ),
                     ),
-
                     GestureDetector(
                       onTap: _showAddOperationDialog,
                       child: Container(
@@ -2702,6 +2990,58 @@ class AddTransactionPageState extends State<AddTransactionPage> {
   }
 
 // ===================================
+
+  Widget _buildSearchField() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(80.0, 8.0, 8.0, 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      child: TextField(
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'ابحث عن اسم...',
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            borderSide: BorderSide.none,
+          ),
+          prefixIcon: IconButton(
+            icon: const Icon(Icons.close, color: Colors.redAccent),
+            onPressed: () {
+              setState(() {
+                _isSearchActive = false;
+                _searchQuery = '';
+              });
+            },
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+        ),
+        onChanged: (query) {
+          setState(() {
+            _searchQuery = query; // تحديث نص البحث
+          });
+        },
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _filterTransactions(
+      List<Map<String, dynamic>> transactions, String view) {
+    if (_searchQuery.isEmpty) {
+      return transactions; // إرجاع جميع البيانات إذا كان نص البحث فارغًا
+    }
+
+    final query = _searchQuery.toLowerCase();
+    return transactions.where((transaction) {
+      final name =
+          transaction[view == 'customers' ? 'client_name' : 'agent_name']
+              ?.toString()
+              .toLowerCase();
+      return name?.contains(query) ?? false;
+    }).toList();
+  }
 // ===================================
 }
 
