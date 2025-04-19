@@ -11,6 +11,7 @@ import 'cus_man/add_transaction.dart';
 // import 'cus_man/translithelp.dart';
 import 'cus_man/search.dart';
 import 'dily_cont/daily_account_page.dart';
+import 'dily_cont/my_box.dart';
 import 'backjes/backjes.dart';
 import 'my_data/personal_info_page.dart';
 
@@ -204,13 +205,33 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.monitor_weight_rounded,
-                size: 35, color: Colors.white),
-            onPressed: () {
-              // إضافة وظيفة عند الضغط على أيقونة المحفظة
-            },
+          Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withOpacity(0.3),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.monitor_weight_rounded,
+                  color: Color(0xFF999999), size: 28),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MyBoxScreen(),
+                  ),
+                );
+              },
+            ),
           ),
+          // ),
           const SizedBox(width: 16),
         ],
       ),
@@ -438,13 +459,10 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                     builder: (context) => const BackupRestorePage()));
+          } else if (label == 'مذكرتي') {
+            Navigator.push(context,
+                MaterialPageRoute(builder: (context) => const MyBoxScreen()));
           }
-          // else if (label == 'مذكرتي') {
-          //   Navigator.push(
-          //       context,
-          //       MaterialPageRoute(
-          //           builder: (context) => AddTransactionPageTow()));
-          // }
         },
         child: Container(
           decoration: BoxDecoration(

@@ -22,6 +22,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
   List<Map<String, dynamic>> _customers = [];
   List<Map<String, dynamic>> _agents = [];
   bool _showCustomersTable = true;
+  bool _saveAccount = true;
   bool _showSearchField = false;
   String _searchQuery = '';
   // متغيرات لتخزين المبالغ
@@ -121,34 +122,49 @@ class _AddDeletePageState extends State<AddDeletePage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
+                const Text(
                   'إضافة حساب جديد',
                   style: TextStyle(
                     fontSize: 20.0,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
                   ),
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 24.0),
                 Row(
+                  mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    _buildButton(
-                      label: 'عميل',
-                      color: Colors.blue,
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showAddCustomerDialog();
-                      },
+                    const SizedBox(width: 10.0),
+                    Expanded(
+                      child: _buildActionButton(
+                        label: 'عميل',
+                        icon: Icons.person_outline,
+                        color: Colors.blue.shade600,
+                        onPressed: () {
+                          _saveAccount = true;
+
+                          Navigator.pop(context);
+                          _showAddCustomerDialog();
+                        },
+                      ),
                     ),
-                    _buildButton(
-                      label: 'وكيل',
-                      color: Colors.orange,
-                      onPressed: () {
-                        Navigator.pop(context);
-                        _showAddAgentDialog();
-                      },
+                    const SizedBox(width: 20.0),
+                    Expanded(
+                      child: _buildActionButton(
+                        label: 'مورد',
+                        icon: Icons.person_outline,
+                        color: Colors.orange.shade600,
+                        onPressed: () {
+                          _saveAccount = false;
+
+                          Navigator.pop(context);
+                          _showAddCustomerDialog();
+                        },
+                      ),
                     ),
+                    const SizedBox(width: 10.0),
                   ],
                 ),
               ],
@@ -159,292 +175,135 @@ class _AddDeletePageState extends State<AddDeletePage> {
     );
   }
 
-// اضافة حساب عميل
+// إضافة حساب عميل او وكيل  (نسخة محسنة)
   void _showAddCustomerDialog() {
     showDialog(
       context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          elevation: 8,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // العنوان العلوي
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade800,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16.0),
-                      topRight: Radius.circular(16.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'إضافة عميل',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // الحقول النصية
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _nameController,
-                        autofocus: true,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: 'الاسم',
-                          labelStyle: const TextStyle(color: Colors.blue),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.blue, width: 2.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.blue, width: 2.0),
-                          ),
-                        ),
-                        onEditingComplete: () {
-                          FocusScope.of(context).nextFocus();
-                        },
-                      ),
-                      const SizedBox(height: 15),
-                      TextField(
-                        controller: _phoneController,
-                        decoration: InputDecoration(
-                          labelText: 'رقم الهاتف',
-                          labelStyle: const TextStyle(color: Colors.blue),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.blue, width: 2.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.blue, width: 2.0),
-                          ),
-                        ),
-                        keyboardType: TextInputType.phone,
-                        textInputAction: TextInputAction.done,
-                        onEditingComplete: () {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // الأزرار السفلية
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildButton(
-                      label: 'إلغاء',
-                      color: Colors.redAccent,
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                    _buildButton(
-                      label: 'حفظ',
-                      color: Colors.green.shade400,
-                      onPressed: _saveCustomer,
+      builder: (context) {
+        return Directionality(
+          textDirection: TextDirection.rtl,
+          child: Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(16),
+            child: SingleChildScrollView(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 12,
+                      spreadRadius: 1,
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          ),
-        ),
-      ),
-    ).then((_) {
-      _nameController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _nameController.text.length),
-      );
-    });
-  }
-
-// اضافة حساب وكيل
-  void _showAddAgentDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          elevation: 8, // إضافة ظل للنافذة
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // العنوان العلوي
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16.0),
-                      topRight: Radius.circular(16.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'إضافة وكيل',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      // اختيار خط أنيق
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // الحقول النصية
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _nameController,
-                        autofocus: true,
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: 'الاسم',
-                          labelStyle: const TextStyle(color: Colors.orange),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.orange, width: 2.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.orange, width: 2.0),
-                          ),
-                        ),
-                        onEditingComplete: () {
-                          FocusScope.of(context).nextFocus();
-                        },
-                      ),
-                      const SizedBox(height: 15),
-                      TextField(
-                        controller: _phoneController,
-                        decoration: InputDecoration(
-                          labelText: 'رقم الهاتف',
-                          labelStyle: const TextStyle(color: Colors.orange),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: BorderSide.none,
-                          ),
-                          filled: true,
-                          fillColor: Colors.grey.shade100,
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.orange, width: 2.0),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.0),
-                            borderSide: const BorderSide(
-                                color: Colors.orange, width: 2.0),
-                          ),
-                        ),
-                        keyboardType: TextInputType.phone,
-                        textInputAction: TextInputAction.done,
-                        onEditingComplete: () {
-                          FocusScope.of(context).unfocus();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // الأزرار السفلية
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _buildButton(
-                      label: 'إلغاء',
-                      color: Colors.redAccent,
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
+                    // Header with gradient
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _saveAccount
+                              ? [Colors.blue.shade700, Colors.blue.shade500]
+                              : [
+                                  Colors.orange.shade700,
+                                  Colors.orange.shade500
+                                ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          Icon(
+                              _saveAccount
+                                  ? Icons.person_add_alt_1
+                                  : Icons.business,
+                              size: 25,
+                              color: Colors.white),
+                          const SizedBox(height: 4),
+                          Text(
+                            _saveAccount
+                                ? 'إضافة عميل جديد'
+                                : 'إضافة مورد جديد',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    _buildButton(
-                      label: 'حفظ',
-                      color: Colors.green.shade500,
-                      onPressed: _saveAgent,
+
+                    // Form Fields
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        children: [
+                          _buildInputField(
+                            controller: _nameController,
+                            label: 'الاسم الكامل',
+                            icon: Icons.person_outline,
+                            textInputAction: TextInputAction.next,
+                            onEditingComplete: () =>
+                                FocusScope.of(context).nextFocus(),
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInputField(
+                            controller: _phoneController,
+                            label: 'رقم الهاتف',
+                            icon: Icons.phone_android,
+                            keyboardType: TextInputType.phone,
+                            textInputAction: TextInputAction.done,
+                            onEditingComplete: () =>
+                                FocusScope.of(context).unfocus(),
+                          ),
+                        ],
+                      ),
                     ),
+
+                    // Action Buttons
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _buildActionButton(
+                              label: 'الغاء',
+                              icon: Icons.close,
+                              color: Colors.red.shade600,
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildActionButton(
+                              label: _saveAccount ? 'حفظ العميل' : 'حفظ المورد',
+                              icon: Icons.save,
+                              color: Colors.green.shade600,
+                              onPressed:
+                                  _saveAccount ? _saveCustomer : _saveAgent,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
-                const SizedBox(height: 16),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     ).then((_) {
       _nameController.selection = TextSelection.fromPosition(
         TextPosition(offset: _nameController.text.length),
@@ -492,286 +351,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
     _toggleTable(false);
   }
 
-// عرض معلومات كل العملاء
-  void _showTotalSummaryDialog() async {
-    // استدعاء الدالة للحصول على النتائج
-    final summary = await _dbHelper.getTotalSummary();
-
-    // عرض النافذة المنبثقة
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        Color textColor;
-        if (summary['totalOutstanding']!.toDouble() > 0) {
-          textColor = Colors.orange;
-        } else if (summary['totalOutstanding']!.toDouble() < 0) {
-          textColor = Colors.red;
-        } else {
-          textColor = Colors.black;
-        }
-
-        int numString = summary['totalOutstanding']!.toInt();
-        return Dialog(
-          backgroundColor: const Color(0xFFE1E1E1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                decoration: const BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.0),
-                    topRight: Radius.circular(12.0),
-                  ),
-                ),
-                child: const Text(
-                  ' معلومات العملاء',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: Colors.blue, width: 3.0),
-                    bottom: BorderSide(color: Colors.blue, width: 3.0),
-                  ),
-                ),
-                child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(5.0),
-                      1: FlexColumnWidth(5.0),
-                    },
-                    border: TableBorder.all(
-                      color: Colors.blue,
-                      width: 2.0,
-                    ),
-                    children: [
-                      _buildInfoRow(
-                          summary['totalCustomers']!.toString(), 'عدد العملاء'),
-                      _buildInfoRow(summary['totalAdditions']!.toString(),
-                          'إجمالي الإضافات'),
-                      _buildInfoRow(summary['totalPayments']!.toString(),
-                          'إجمالي التسديدات'),
-                    ]),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10.0),
-                margin: const EdgeInsets.all(10.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(color: Colors.blue, width: 3),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'المبلغ المستحق على العملاء لك ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10.0),
-                    Text(
-                      numString.toString(),
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: textColor,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              Container(
-                height: 3,
-                color: Colors.blue,
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(4.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(12.0),
-                    bottomRight: Radius.circular(12.0),
-                  ),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // إغلاق النافذة
-                  },
-                  child: const Text(
-                    'إغلاق',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-// عرض معلومات كل الوكلاء
-  void _showTotalAgeentsSummaryDialog() async {
-    // استدعاء الدالة للحصول على النتائج
-    final summary = await _dbHelper.getTotalAgeensSummary();
-
-    // عرض النافذة المنبثقة
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        Color textColor;
-        if (summary['totalOutstanding']!.toDouble() > 0) {
-          textColor = Colors.red;
-        } else if (summary['totalOutstanding']!.toDouble() < 0) {
-          textColor = Colors.green;
-        } else {
-          textColor = Colors.black;
-        }
-
-        int numString = summary['totalOutstanding']!.toInt();
-        return Dialog(
-          backgroundColor: const Color(0xFFE1E1E1),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                decoration: const BoxDecoration(
-                  color: Colors.orange,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(12.0),
-                    topRight: Radius.circular(12.0),
-                  ),
-                ),
-                child: const Text(
-                  ' معلومات الموردين',
-                  style: TextStyle(
-                    fontSize: 18.0,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(
-                    top: BorderSide(color: Colors.orange, width: 3.0),
-                    bottom: BorderSide(color: Colors.orange, width: 3.0),
-                  ),
-                ),
-                child: Table(
-                    columnWidths: const {
-                      0: FlexColumnWidth(5.0),
-                      1: FlexColumnWidth(5.0),
-                    },
-                    border: TableBorder.all(
-                      color: Colors.orange,
-                      width: 2.0,
-                    ),
-                    children: [
-                      _buildInfoRow(summary['totalCustomers']!.toString(),
-                          'عدد الموردين'),
-                      _buildInfoRow(summary['totalAdditions']!.toString(),
-                          'إجمالي القروض'),
-                      _buildInfoRow(summary['totalPayments']!.toString(),
-                          'إجمالي التسديدات'),
-                    ]),
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10.0),
-                margin: const EdgeInsets.all(10.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                  border: Border.all(color: Colors.orange, width: 3),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'المبلغ المستحق عليك للموردين ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 10.0),
-                    Text(
-                      numString.toString(),
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: textColor,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    )
-                  ],
-                ),
-              ),
-              Container(
-                height: 3,
-                color: Colors.orange,
-              ),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(4.0),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(12.0),
-                    bottomRight: Radius.circular(12.0),
-                  ),
-                ),
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // إغلاق النافذة
-                  },
-                  child: const Text(
-                    'إغلاق',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
 // حذف حساب عميل
   void _deleteCustomer(int id) async {
     await _dbHelper.deleteCustomer(id);
@@ -784,340 +363,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
     await _dbHelper.deleteAgent(id);
     _showSuccessMessage('تم حذف الوكيل بنجاح');
     _loadAgents();
-  }
-
-// عرض معلومات  عميل
-  void _showCustomerDetails(String name, String phone, int id) async {
-    final summary = await _dbHelper.getSummaryByName(name);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          elevation: 8, // إضافة ظل للنافذة
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // العنوان العلوي
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10.0),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade700,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16.0),
-                      topRight: Radius.circular(16.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'تفاصيل العميل',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // الجدول مع حدود دائرية
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(color: Colors.blue, width: 2.0),
-                    ),
-                    child: Column(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'الاسم',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.blue,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const Divider(height: 1, color: Colors.blue),
-                        _buildTableRow('الهاتف:', phone, TextAlign.right),
-                        const Divider(height: 1, color: Colors.blue),
-                        _buildTableRow(
-                          'كل الديون:',
-                          summary['totalAdditions'].toString(),
-                          TextAlign.right,
-                          valueColor: Colors.red,
-                        ),
-                        const Divider(height: 1, color: Colors.blue),
-                        _buildTableRow(
-                          'كل التسديدات:',
-                          summary['totalPayments'].toString(),
-                          TextAlign.right,
-                          valueColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.blue),
-                        _buildTableRow(
-                          'المستحق لك:',
-                          summary['outstanding'].toString(),
-                          TextAlign.end,
-                          valueColor:
-                              double.parse(summary['outstanding'].toString()) >
-                                      0
-                                  ? Colors.red
-                                  : Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // الأزرار السفلية
-                Padding(
-                  padding: const EdgeInsets.all(6.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // زر الحذف
-                      _buildButton(
-                        label: 'حذف',
-                        color: Colors.redAccent,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _deleteCustomer(id);
-                        },
-                      ),
-                      // زر التعديل
-                      _buildButton(
-                        label: 'تعديل',
-                        color: Colors.orange.shade700,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _updateCustomer(id, name, phone);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // زر الإغلاق
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    'إغلاق',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 6),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-// عرض معلومات  وكيل
-  void _showAgentDetails(String name, String phone, int id) async {
-    final summary = await _dbHelper.getSummaryAgeentByName(name);
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
-          ),
-          elevation: 8, // إضافة ظل للنافذة
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // العنوان العلوي
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade700,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16.0),
-                      topRight: Radius.circular(16.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'تفاصيل التاجر',
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-
-                // الجدول مع حدود دائرية
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12.0),
-                      border: Border.all(color: Colors.orange, width: 2.0),
-                    ),
-                    child: Column(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.all(6.0),
-                          child: Text(
-                            'الاسم',
-                            style: TextStyle(
-                              fontSize: 18.0,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.cyan,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w800,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const Divider(height: 1, color: Colors.orange),
-                        _buildTableRow('الهاتف:', phone, TextAlign.right),
-                        const Divider(height: 1, color: Colors.orange),
-                        _buildTableRow(
-                          'كل الديون:',
-                          summary['totalAdditions'].toString(),
-                          TextAlign.right,
-                          valueColor: Colors.red,
-                        ),
-                        const Divider(height: 1, color: Colors.orange),
-                        _buildTableRow(
-                          'كل التسديدات:',
-                          summary['totalPayments'].toString(),
-                          TextAlign.right,
-                          valueColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.orange),
-                        _buildTableRow(
-                          'المستحق لك:',
-                          summary['outstanding'].toString(),
-                          TextAlign.end,
-                          valueColor:
-                              double.parse(summary['outstanding'].toString()) >
-                                      0
-                                  ? Colors.red
-                                  : Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                // الأزرار السفلية
-                Padding(
-                  padding: const EdgeInsets.all(6.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      // زر الحذف
-                      _buildButton(
-                        label: 'حذف',
-                        color: Colors.redAccent,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _deleteAgent(id);
-                        },
-                      ),
-                      // زر التعديل
-                      _buildButton(
-                        label: 'تعديل',
-                        color: Colors.orange.shade700,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _updateAgent(id, name, phone);
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // زر الإغلاق
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text(
-                    'إغلاق',
-                    style: TextStyle(
-                      color: Colors.blue,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
 // تعديل حساب عميل
@@ -1245,16 +490,21 @@ class _AddDeletePageState extends State<AddDeletePage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildButton(
-                        label: 'إلغاء',
-                        color: Colors.redAccent,
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                        },
+                      const SizedBox(width: 10.0),
+                      Expanded(
+                        child: _buildActionButton(
+                          label: 'إغلاق',
+                          icon: Icons.close,
+                          color: Colors.red.shade600,
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
                       ),
-                      _buildButton(
+                      const SizedBox(width: 20.0),
+                      Expanded(
+                          child: _buildActionButton(
                         label: 'حفظ',
-                        color: Colors.green.shade400,
+                        icon: Icons.save_as_outlined,
+                        color: Colors.green.shade600,
                         onPressed: () {
                           Navigator.pop(context);
                           _dbHelper.updateCustomer(
@@ -1265,7 +515,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
                           _showSuccessMessage('تم تعديل بيانات العميل بنجاح');
                           _loadCustomers();
                         },
-                      ),
+                      )),
+                      const SizedBox(width: 10.0),
                     ],
                   ),
                   const SizedBox(height: 10.0),
@@ -1402,26 +653,21 @@ class _AddDeletePageState extends State<AddDeletePage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          ElevatedButton(
-                            onPressed: () => Navigator.pop(context),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.redAccent,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 25, vertical: 5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: const Text(
-                              'إلغاء',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
+                          const SizedBox(width: 10.0),
+                          Expanded(
+                            child: _buildActionButton(
+                              label: 'إغلاق',
+                              icon: Icons.close,
+                              color: Colors.red.shade600,
+                              onPressed: () => Navigator.of(context).pop(),
                             ),
                           ),
-                          ElevatedButton(
+                          const SizedBox(width: 20.0),
+                          Expanded(
+                              child: _buildActionButton(
+                            label: 'حفظ',
+                            icon: Icons.save_as_outlined,
+                            color: Colors.green.shade600,
                             onPressed: () {
                               Navigator.pop(context);
                               _dbHelper.updateAgent(
@@ -1433,23 +679,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                   'تم تعديل بيانات الوكيل بنجاح');
                               _loadAgents();
                             },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 25, vertical: 5),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              elevation: 4,
-                            ),
-                            child: const Text(
-                              'حفظ',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 18,
-                              ),
-                            ),
-                          ),
+                          )),
+                          const SizedBox(width: 10.0),
                         ],
                       )),
                 ],
@@ -1459,7 +690,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
     );
   }
 
-  // انشاء الجدول
+/*   // انشاء الجدول
   Widget _buildTable(List<Map<String, dynamic>> data, bool isCustomers) {
     final filteredList = data
         .where((item) =>
@@ -1612,7 +843,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                   item['name'], item['phone'], item['id']);
                             } else {
                               FocusScope.of(context).unfocus();
-                              _showAgentDetails(
+                              _showCustomerDetails(
                                   item['name'], item['phone'], item['id']);
                             }
                           },
@@ -1628,7 +859,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
       ),
     );
   }
-
+ */
 //  الواجهه
   @override
   Widget build(BuildContext context) {
@@ -1736,9 +967,12 @@ class _AddDeletePageState extends State<AddDeletePage> {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFE6E6E6),
+                color: Colors.white,
                 border: const Border(
-                  bottom: BorderSide(color: Color(0xFF0BD4EE), width: 3),
+                  bottom: BorderSide(
+                    color: Color(0xFF0BD4EE),
+                    width: 1.6,
+                  ),
                 ),
                 boxShadow: [
                   BoxShadow(
@@ -1883,8 +1117,15 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
             ),
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(0.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(16)),
+                  border: Border.all(
+                      color: _showCustomersTable ? Colors.blue : Colors.orange,
+                      width: 2),
+                ),
+                margin: const EdgeInsets.fromLTRB(4.0, 4.0, 4.0, 0.0),
                 child: PageView(
                   controller: _pageController,
                   children: [
@@ -1898,11 +1139,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
               padding: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: const Color(0xFF00ACC1),
-                border: Border(
-                  top: BorderSide(
-                      color: _showCustomersTable ? Colors.blue : Colors.orange,
-                      width: 2),
-                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.2),
@@ -1975,9 +1211,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
 
                   // أيقونة المعلومات
                   GestureDetector(
-                    onTap: _showCustomersTable
-                        ? _showTotalSummaryDialog
-                        : _showTotalAgeentsSummaryDialog,
+                    onTap: _showTotalSummaryDialog,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 100),
                       padding: const EdgeInsets.all(6),
@@ -2004,100 +1238,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-// دالة مساعدة لإنشاء صفوف الجدول
-  TableRow _buildInfoRow(String value, String label) {
-    return TableRow(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14.0,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 14.0,
-              fontWeight: FontWeight.w800,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-
-// دالة مساعدة لإنشاء صفوف الجدول
-  Widget _buildTableRow(
-    String label,
-    String value,
-    TextAlign textAlign, {
-    Color? valueColor,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 1.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16.0,
-              fontWeight: FontWeight.w600,
-              color: Colors.cyan,
-            ),
-            textAlign: TextAlign.right,
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16.0,
-              fontWeight: FontWeight.w800,
-              color: valueColor ?? Colors.black87,
-            ),
-            textAlign: textAlign,
-          ),
-        ],
-      ),
-    );
-  }
-
-// دالة مساعدة لإنشاء الأزرار بشكل موحد
-  Widget _buildButton({
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-    double fontSize = 16.0,
-    FontWeight fontWeight = FontWeight.w600,
-  }) {
-    return ElevatedButton(
-      onPressed: onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 4, // إضافة ظل للأزرار
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: fontSize,
-          fontWeight: fontWeight,
-          color: Colors.white,
         ),
       ),
     );
@@ -2176,16 +1316,820 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
 // ===========================================================================
+
+// دالة مساعدة لإنشاء حقول الإدخال بنفس النمط
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    TextInputAction textInputAction = TextInputAction.next,
+    VoidCallback? onEditingComplete,
+  }) {
+    return TextField(
+      controller: controller,
+      autofocus: true,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon,
+            color:
+                _saveAccount ? Colors.blue.shade400 : Colors.orange.shade400),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color:
+                  _saveAccount ? Colors.blue.shade400 : Colors.orange.shade400,
+              width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color:
+                  _saveAccount ? Colors.blue.shade400 : Colors.orange.shade400,
+              width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      ),
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      onEditingComplete: onEditingComplete,
+      style: const TextStyle(fontSize: 15),
+    );
+  }
+
+  void _showCustomerDetails(String name, String phone, int id) async {
+    final summary = _showCustomersTable
+        ? await _dbHelper.getSummaryByName(name)
+        : await _dbHelper.getSummaryAgeentByName(name);
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final isDebt = double.parse(summary['outstanding'].toString()) > 0;
+        final isDebtCust =
+            double.parse(summary['outstanding'].toString()) < 0 ? 'عليك' : 'لك';
+        final isDebtAgnt =
+            double.parse(summary['outstanding'].toString()) < 0 ? 'لك' : 'عليك';
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12), // تقليل الهوامش الخارجية
+          child: SingleChildScrollView(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius:
+                    BorderRadius.circular(16), // تقليل استدارة الزوايا
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header with gradient (أصغر حجمًا)
+                  Container(
+                    width: double.infinity,
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12), // تقليل الحشو
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _showCustomersTable
+                            ? [Colors.blue.shade700, Colors.blue.shade500]
+                            : [Colors.orange.shade700, Colors.orange.shade500],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                            _showCustomersTable
+                                ? Icons.person_outline
+                                : Icons.business,
+                            size: 32,
+                            color: Colors.white), // تصغير الأيقونة
+                        const SizedBox(height: 4), // تقليل المسافة
+                        Text(
+                          _showCustomersTable
+                              ? 'تفاصيل العميل'
+                              : 'تفاصيل المورد',
+                          style: const TextStyle(
+                            fontSize: 18, // تصغير حجم الخط
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Customer Info Section (أصغر حجمًا)
+                  Padding(
+                    padding: const EdgeInsets.all(12), // تقليل الهوامش الداخلية
+                    child: Column(
+                      children: [
+                        _buildInfoCard(
+                          icon: Icons.person,
+                          title: 'الاسم',
+                          value: name,
+                          color: Colors.blue.shade100,
+                        ),
+                        const SizedBox(height: 8), // تقليل المسافة بين البطاقات
+                        _buildInfoCard(
+                          icon: Icons.phone,
+                          title: 'الهاتف',
+                          value: phone,
+                          color: Colors.green.shade100,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Financial Summary (أكثر إحكاما)
+                  Container(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 12), // تقليل الهوامش الجانبية
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius:
+                          BorderRadius.circular(10), // زوايا أقل استدارة
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSummaryRow(
+                          _showCustomersTable ? 'كل الديون' : 'كل القروض',
+                          // summary['totalAdditions'].toString(),
+                          _dbHelper.getNumberFormat(summary['totalAdditions']),
+
+                          icon: Icons.add_circle_outline,
+                          color: Colors.red,
+                        ),
+                        Divider(
+                            height: 1,
+                            color: Colors.grey.shade300,
+                            thickness: 0.5), // خط فاصل أرفع
+                        _buildSummaryRow(
+                          'كل التسديدات',
+                          // summary['totalPayments'].toString(),
+                          _dbHelper.getNumberFormat(summary['totalPayments']),
+
+                          icon: Icons.remove_circle_outline,
+                          color: Colors.green,
+                        ),
+                        Divider(
+                            height: 1,
+                            color: Colors.grey.shade300,
+                            thickness: 0.5),
+                        _buildSummaryRow(
+                          _showCustomersTable
+                              ? 'المستحق $isDebtCust'
+                              : 'المستحق $isDebtAgnt',
+                          // summary['outstanding'].toString(),
+                          _dbHelper.getNumberFormat(summary['outstanding']),
+
+                          icon: isDebt
+                              ? Icons.warning_amber
+                              : Icons.check_circle_outline,
+                          color: isDebt ? Colors.red : Colors.green,
+                          isBold: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Action Buttons (أزرار أكثر إحكاما)
+                  Padding(
+                    padding: const EdgeInsets.all(12), // تقليل الهوامش
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            label: 'حذف',
+                            icon: Icons.delete,
+                            color: Colors.red.shade600,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showCustomersTable
+                                  ? _deleteCustomer(id)
+                                  : _deleteAgent(id);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8), // تقليل المسافة بين الأزرار
+                        Expanded(
+                          child: _buildActionButton(
+                            label: 'تعديل',
+                            icon: Icons.edit,
+                            color: Colors.orange.shade600,
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                              _showCustomersTable
+                                  ? _updateCustomer(id, name, phone)
+                                  : _updateAgent(id, name, phone);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: _buildActionButton(
+                            label: 'إغلاق',
+                            icon: Icons.close,
+                            color: Colors.blue.shade600,
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+// دالة مساعدة معدلة لإنشاء بطاقات المعلومات (أصغر حجمًا)
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10), // تقليل الحشو الداخلي
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(10), // زوايا أقل استدارة
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 24, color: Colors.blue.shade800), // تصغير الأيقونة
+          const SizedBox(width: 8), // تقليل المسافة
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13, // تصغير حجم الخط
+                    color: Colors.blue.shade800,
+                  ),
+                ),
+                const SizedBox(height: 2), // تقليل المسافة
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 15, // تصغير حجم الخط
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// دالة مساعدة معدلة لإنشاء صفوف الملخص المالي (أكثر إحكاما)
+  Widget _buildSummaryRow(
+    String label,
+    String value, {
+    required IconData icon,
+    required Color color,
+    bool isBold = false,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          vertical: 8, horizontal: 12), // تقليل الحشو
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: color), // تصغير الأيقونة
+          const SizedBox(width: 8), // تقليل المسافة
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 14, // تصغير حجم الخط
+                color: Colors.grey.shade800,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 14, // تصغير حجم الخط
+              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+// دالة مساعدة معدلة لإنشاء أزرار التحكم (أصغر حجمًا)
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 10), // تقليل الارتفاع
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8), // زوايا أقل استدارة
+        ),
+        elevation: 1, // تقليل الظل
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 18, color: Colors.white), // تصغير الأيقونة
+          const SizedBox(width: 6), // تقليل المسافة
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13, // تصغير حجم الخط
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
 // ===========================================================================
+  void _showTotalSummaryDialog() async {
+    final summary = _showCustomersTable
+        ? await _dbHelper.getTotalSummary()
+        : await _dbHelper.getTotalAgeensSummary();
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        final outstanding = summary['totalOutstanding']!.toDouble();
+        final isDebt = outstanding > 0;
+        final isCredit = outstanding < 0;
+        // double totalCustomers = summary['totalCustomers']!.toDouble();
+
+        final textColor = isDebt
+            ? Colors.red.shade700
+            : isCredit
+                ? Colors.green.shade700
+                : Colors.grey.shade800;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: SingleChildScrollView(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 12,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _showCustomersTable
+                            ? [Colors.blue.shade700, Colors.blue.shade500]
+                            : [Colors.orange.shade700, Colors.orange.shade500],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                            _showCustomersTable
+                                ? Icons.person_outline
+                                : Icons.business,
+                            size: 32,
+                            color: Colors.white),
+                        const SizedBox(height: 4),
+                        Text(
+                          _showCustomersTable
+                              ? 'ملخص العملاء'
+                              : 'ملخص  الموردين',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        Text(
+                          'إجمالي العدد: ${summary['totalCustomers']} ',
+                          // 'إجمالي العدد: ${_dbHelper.getNumberFormat(totalCustomers)} ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Summary Cards
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        _buildSummaryCard(
+                          icon: Icons.add_circle_outline,
+                          title: 'إجمالي الإضافات',
+                          // value: summary['totalAdditions']!.toString(),
+
+                          value: _dbHelper
+                              .getNumberFormat(summary['totalAdditions']),
+                          color: Colors.red.shade100,
+                          valueColor: Colors.red.shade700,
+                        ),
+                        const SizedBox(height: 8),
+                        _buildSummaryCard(
+                          icon: Icons.remove_circle_outline,
+                          title: 'إجمالي التسديدات',
+                          // value: summary['totalPayments']!.toString(),
+                          value: _dbHelper
+                              .getNumberFormat(summary['totalPayments']),
+                          color: Colors.green.shade100,
+                          valueColor: Colors.green.shade700,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Outstanding Amount
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: isDebt
+                          ? Colors.red.shade50
+                          : isCredit
+                              ? Colors.green.shade50
+                              : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDebt
+                            ? Colors.red.shade200
+                            : isCredit
+                                ? Colors.green.shade200
+                                : Colors.grey.shade300,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Text(
+                          _showCustomersTable
+                              ? isDebt
+                                  ? 'المبلغ المستحق لك من العملاء'
+                                  : isCredit
+                                      ? 'المبلغ المستحق للعملاء عليك'
+                                      : 'لا يوجد مستحقات'
+                              : isCredit
+                                  ? 'المبلغ المستحق لك من الموردين'
+                                  : isDebt
+                                      ? 'المبلغ المستحق  عليك  للموردين'
+                                      : 'لا يوجد مستحقات',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _dbHelper.getNumberFormat(outstanding),
+                          // outstanding.toStringAsFixed(2),
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        if (isDebt || isCredit)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Icon(
+                              isDebt ? Icons.warning_amber : Icons.info_outline,
+                              size: 20,
+                              color: textColor,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  // Close Button
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: _buildActionButton(
+                      label: 'إغلاق',
+                      icon: Icons.close,
+                      color: _showCustomersTable
+                          ? Colors.blue.shade600
+                          : Colors.orange.shade600,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+// دالة مساعدة لإنشاء بطاقات الملخص (بنفس نمط الدوال السابقة)
+  Widget _buildSummaryCard({
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+    required Color valueColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 24, color: valueColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade800,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: valueColor,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+//  771530949906
+
+  Widget _buildTable(List<Map<String, dynamic>> data, bool isCustomers) {
+    final filteredList = data
+        .where((item) =>
+            item['name'].toLowerCase().contains(_searchQuery.toLowerCase()))
+        .toList();
+
+    final primaryColor =
+        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
+    final lightColor =
+        isCustomers ? Colors.blue.shade100 : Colors.orange.shade100;
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Table Header
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              color: primaryColor,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    isCustomers ? 'المستحق' : 'المستحق عليك',
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 5,
+                  child: Text(
+                    'الاسم',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const Expanded(
+                  flex: 2,
+                  child: Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 30,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Table Body
+          Expanded(
+            child: filteredList.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'لا توجد بيانات متاحة',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: filteredList.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredList[index];
+                      final outstanding = isCustomers
+                          ? _customerOutstanding[item['id']] ?? 0.0
+                          : _agentOutstanding[item['id']] ?? 0.0;
+
+                      final textColor = outstanding > 0
+                          ? Colors.red.shade700
+                          : outstanding < 0
+                              ? Colors.green.shade700
+                              : Colors.grey.shade800;
+
+                      return Container(
+                        decoration: BoxDecoration(
+                          color: index % 2 == 0
+                              ? lightColor.withOpacity(0.3)
+                              : Colors.white,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: primaryColor,
+                              width: 2.0,
+                            ),
+                          ),
+                        ),
+                        child: InkWell(
+                          onTap: () {
+                            FocusScope.of(context).unfocus();
+                            _showCustomerDetails(
+                                item['name'], item['phone'], item['id']);
+                          },
+                          child: Container(
+                            // padding: const EdgeInsets.symmetric(vertical: 12),
+                            child: Row(
+                              children: [
+                                // Outstanding Amount
+                                Expanded(
+                                  flex: 3,
+                                  child: Text(
+                                    _dbHelper.getNumberFormat(outstanding),
+
+                                    // formatter.format(outstanding.toInt()),
+                                    // outstanding.toStringAsFixed(2),
+                                    textAlign: TextAlign.center,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                  ),
+                                ),
+
+                                // Name
+                                Expanded(
+                                  flex: 5,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12, horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        left: BorderSide(
+                                          color: primaryColor,
+                                          width: 2.0,
+                                        ),
+                                        right: BorderSide(
+                                          color: primaryColor,
+                                          width: 2.0,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      item['name'],
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                      textAlign: TextAlign.start,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ),
+
+                                // Info Button
+                                Expanded(
+                                  flex: 2,
+                                  child: IconButton(
+                                    icon: Icon(
+                                      Icons.info_outline,
+                                      color: primaryColor,
+                                      size: 24,
+                                    ),
+                                    onPressed: () {
+                                      FocusScope.of(context).unfocus();
+                                      _showCustomerDetails(item['name'],
+                                          item['phone'], item['id']);
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
- 
-
-
-
-
-
-
-
 // ==================================================
-

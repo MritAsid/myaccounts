@@ -275,7 +275,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                             Navigator.pop(context);
                             final now = DateTime.now();
                             final startOfWeek =
-                                now.subtract(Duration(days: now.weekday));
+                                now.subtract(Duration(days: now.weekday - 1));
                             setState(() {
                               _selectedDate = null;
                               _startDate = startOfWeek;
@@ -380,7 +380,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
 // جلب العمليات للأسبوع الحالي للعملاء
   Future<void> _fetchTransactionsByWeek() async {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday));
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final transactions = await DatabaseHelper().getOperationsByDateRange(
       startOfWeek,
       now,
@@ -551,7 +551,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
 // جلب العمليات للأسبوع الحالي للوكلاء
   Future<void> _fetchAgentTransactionsByWeek() async {
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday));
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final transactions = await DatabaseHelper().getAgentOperationsByDateRange(
       startOfWeek,
       now,
@@ -1342,10 +1342,11 @@ class AddTransactionPageState extends State<AddTransactionPage> {
   Future<void> _saveTransactionToDatabase() async {
     double? amount = double.tryParse(_amountController.text.trim());
     String details = _detailsController.text.trim();
+    String type = 'كسب';
+    String detailsNum = '🙎‍♂️ ${_nameController.text}';
 
     if (selectedClientId == null || amount == null || amount <= 0) {
       _showErrorMessage('يرجى اختيار عميل صحيح ومبلغ أكبر من 0');
-
       return;
     }
 
@@ -1356,6 +1357,10 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       _transactionType,
     );
 
+    if (_transactionType == 'تسديد') {
+      final dbHelper = DatabaseHelper();
+      await dbHelper.insertDailyTransaction(amount, detailsNum, type);
+    }
     await fetchTransactions();
     _showSuccessMessage('تم حفظ العملية بنجاح');
 
@@ -1365,6 +1370,11 @@ class AddTransactionPageState extends State<AddTransactionPage> {
 
 // ================  حفظ العملية للوكلاء===============
   void _saveAgentOperation() async {
+    //  double? amount = double.tryParse(_amountController.text.trim());
+    // String details = _detailsController.text.trim();
+    String type = 'صرف';
+    String detailsNum = '🙎‍♂️ تسديد  ${_agentNameController.text}';
+
     if (_transactionType.isNotEmpty) {
       double? amount = double.tryParse(_amountController.text.trim());
       String details = _detailsController.text.trim();
@@ -1381,7 +1391,10 @@ class AddTransactionPageState extends State<AddTransactionPage> {
         details,
         _transactionType,
       );
-
+      if (_transactionType == 'تسديد') {
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insertDailyTransaction(amount, detailsNum, type);
+      }
       _showSuccessMessage('تم حفظ العملية بنجاح');
 
       // التحقق من أن الـ BuildContext لا يزال صالحًا
