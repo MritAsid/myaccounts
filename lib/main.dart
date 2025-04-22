@@ -489,7 +489,7 @@ class _HomePageState extends State<HomePage> {
                 label,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
                 ),
