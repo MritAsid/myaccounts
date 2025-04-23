@@ -23,6 +23,12 @@ class SearchClientPageState extends State<SearchClientPage> {
       []; // لتخزين العمليات المرتبطة بالاسم المدخل
   List<String> _suggestedNames = []; // قائمة الأسماء المشابهة
 
+  // متغيرات لحفظ القيم
+  String name = '';
+  String serviceType = '';
+  String address = '';
+  String phoneNumber = '';
+  double tupeAllMomnt = 0;
   final FocusNode _nameFocusNode = FocusNode();
   bool _showCustomersTable = true; // متغير للتبديل بين الجداول
 
@@ -30,6 +36,8 @@ class SearchClientPageState extends State<SearchClientPage> {
   @override
   void initState() {
     super.initState();
+    _loadSavedData();
+
     _nameFocusNode.addListener(() {
       if (_nameFocusNode.hasFocus) {
         _nameController.selection = TextSelection.fromPosition(
@@ -44,6 +52,23 @@ class SearchClientPageState extends State<SearchClientPage> {
     _nameController.dispose();
     _nameFocusNode.dispose();
     super.dispose();
+  }
+
+  // دالة لتحميل البيانات المحفوظة
+  Future<void> _loadSavedData() async {
+    final info = await DatabaseHelper().getPersonalInfo();
+    if (info != null) {
+      setState(() {
+        name = info['name'] ?? '';
+        serviceType = info['serviceType'] ?? '';
+        address = info['address'] ?? '';
+        phoneNumber = info['phoneNumber'] ?? '';
+      });
+
+      // print(name);
+      // print(serviceType);
+      // print(name);
+    }
   }
 
 // ========= استرجاع الاسماء للعملاء===========
@@ -1504,6 +1529,7 @@ class SearchClientPageState extends State<SearchClientPage> {
 
 //  =========  فتح نافذة ملخص العمليات ===========
   void _showAgeenSummary() async {
+    // print(_buildPersonalInfo);
     final name = _nameController.text.trim();
     if (name.isEmpty) {
       _showErrorMessage('يرجى إدخال اسم العميل أولاً');
@@ -1602,16 +1628,23 @@ class SearchClientPageState extends State<SearchClientPage> {
     // ignore: non_constant_identifier_names
     String NumAgen = _nameController.text;
     final databaseHelper = DatabaseHelper();
-    final summary = await databaseHelper.getSummaryByName(NumAgen);
+
+    final summary = _showCustomersTable
+        ? await databaseHelper.getSummaryByName(NumAgen)
+        : await databaseHelper.getSummaryAgeentByName(NumAgen);
     final totalAdditions = summary['totalAdditions'];
     final totalPayments = summary['totalPayments'];
     final outstanding = summary['outstanding'];
+
+    String numShwo =
+        _showCustomersTable ? '   اسم العميل /  ' : '   اسم المورد /  ';
+
     // تحميل الخط العربي
     final arabicFont = pw.Font.ttf(
       await rootBundle.load('assets/fonts/Amiri-Regular.ttf'),
     );
     final dbHelper = DatabaseHelper(); // إنشاء كائن من الكلاس
-
+    tupeAllMomnt = 0;
     pdf.addPage(
       pw.MultiPage(
         margin: const pw.EdgeInsets.all(10),
@@ -1626,86 +1659,94 @@ class SearchClientPageState extends State<SearchClientPage> {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        pw.SizedBox(height: 5),
+                pw.Container(
+                  // padding: const pw.EdgeInsets.all(10),
+                  padding: const pw.EdgeInsets.fromLTRB(8.0, 4.0, 8.0, 0.0),
 
-                        pw.Text(
-                          '  Report of Operations',
-                          style: const pw.TextStyle(fontSize: 16),
-                          textDirection: pw.TextDirection.ltr,
-                        ),
-                        pw.SizedBox(height: 15),
-                        pw.Text(
-                          '  771282337 ',
-                          style: const pw.TextStyle(fontSize: 13),
-                          textDirection: pw.TextDirection.ltr,
-                        ),
-                        pw.SizedBox(height: 15),
-
-                        // إضافة التاريخ هنا باستخدام الدالة
-                        pw.Text(
-                          '  ${dbHelper.getFormattedDate()}', // استدعاء الدالة
-                          style: const pw.TextStyle(
-                            fontSize: 13,
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    children: [
+                      pw.Column(
+                        // mainAxisSize: pw.MainAxisSize.max,
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          // pw.SizedBox(height: 6),
+                          pw.Text(
+                            'Report of Operations',
+                            style: const pw.TextStyle(fontSize: 16),
+                            textDirection: pw.TextDirection.ltr,
                           ),
-                          textDirection: pw.TextDirection.ltr,
-                        ),
-                      ],
-                    ),
-
-                    // إضافة النص "كشف حساب تفطيلي" باللون الأحمر الداكن
-                    pw.Center(
-                      child: pw.Text(
-                        'كشف حساب تفطيلي',
-                        style: pw.TextStyle(
-                          font: arabicFont,
-                          fontSize: 20,
-                          color: PdfColors.red, // لون أحمر داكن
-                          fontWeight: pw.FontWeight.bold,
-                        ),
-                        textDirection: pw.TextDirection.rtl,
+                          pw.SizedBox(height: 15),
+                          // pw.SizedBox(height: 10),
+                          pw.Text(
+                            phoneNumber,
+                            style: const pw.TextStyle(fontSize: 13),
+                            textDirection: pw.TextDirection.ltr,
+                          ),
+                          // pw.SizedBox(height: 15),
+                          pw.SizedBox(height: 18),
+                          // إضافة التاريخ هنا باستخدام الدالة
+                          pw.Text(
+                            '${dbHelper.getFormattedDate()}', // استدعاء الدالة
+                            style: const pw.TextStyle(
+                              fontSize: 13,
+                            ),
+                            textDirection: pw.TextDirection.ltr,
+                          ),
+                        ],
                       ),
-                    ),
-
-                    pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.end,
-                      children: [
-                        pw.Text(
-                          '  مريط عصيد',
-                          style: pw.TextStyle(font: arabicFont, fontSize: 18),
+                      // إضافة النص "كشف حساب تفطيلي" باللون الأحمر الداكن
+                      pw.Center(
+                        child: pw.Text(
+                          'كشف حساب تفطيلي',
+                          style: pw.TextStyle(
+                            font: arabicFont,
+                            fontSize: 20,
+                            color: PdfColors.red, // لون أحمر داكن
+                            fontWeight: pw.FontWeight.bold,
+                          ),
                           textDirection: pw.TextDirection.rtl,
                         ),
-                        pw.Text(
-                          '  لجمع أعمال ',
-                          style: pw.TextStyle(font: arabicFont, fontSize: 14),
-                          textDirection: pw.TextDirection.rtl,
-                        ),
-                        pw.Text(
-                          '  صنعاء اليمن شارع خولان',
-                          style: pw.TextStyle(font: arabicFont, fontSize: 14),
-                          textDirection: pw.TextDirection.rtl,
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                        crossAxisAlignment: pw.CrossAxisAlignment.end,
+                        children: [
+                          // pw.SizedBox(height: 6),
+                          pw.Text(
+                            name,
+                            style: pw.TextStyle(font: arabicFont, fontSize: 16),
+                            textDirection: pw.TextDirection.rtl,
+                          ),
+                          pw.SizedBox(height: 10),
+                          pw.Text(
+                            serviceType,
+                            style: pw.TextStyle(font: arabicFont, fontSize: 13),
+                            textDirection: pw.TextDirection.rtl,
+                          ),
+                          pw.SizedBox(height: 18),
+                          pw.Text(
+                            address,
+                            style: pw.TextStyle(font: arabicFont, fontSize: 13),
+                            textDirection: pw.TextDirection.rtl,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-
                 pw.SizedBox(height: 10),
 
                 // خط فاصل
                 pw.Divider(height: 1, thickness: 2, color: PdfColors.black),
 
-                pw.SizedBox(height: 15),
+                pw.SizedBox(height: 10),
 
                 // توسيط اسم العميل
-                pw.Center(
-                  child: pw.Text(
-                    'اسم العميل / $NumAgen',
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.end, children: [
+                  pw.Text(
+                    NumAgen,
                     style: pw.TextStyle(
                       font: arabicFont,
                       fontSize: 16,
@@ -1713,7 +1754,17 @@ class SearchClientPageState extends State<SearchClientPage> {
                     ),
                     textDirection: pw.TextDirection.rtl,
                   ),
-                ),
+                  pw.Text(
+                    numShwo,
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                    textDirection: pw.TextDirection.rtl,
+                  ),
+                ]),
+                pw.SizedBox(height: 10),
               ],
             ),
           );
@@ -1725,6 +1776,7 @@ class SearchClientPageState extends State<SearchClientPage> {
               0: const pw.FlexColumnWidth(1.5),
               1: const pw.FlexColumnWidth(5),
               2: const pw.FlexColumnWidth(1.5),
+              3: const pw.FlexColumnWidth(1.5),
             },
             children: [
               pw.TableRow(
@@ -1753,6 +1805,17 @@ class SearchClientPageState extends State<SearchClientPage> {
                     textAlign: pw.TextAlign.center,
                   ),
                   pw.Text(
+                    'الاجمالي',
+                    style: pw.TextStyle(
+                      font: arabicFont,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.white,
+                      fontSize: 16.0,
+                    ),
+                    textDirection: pw.TextDirection.rtl,
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.Text(
                     'المبلغ',
                     style: pw.TextStyle(
                       font: arabicFont,
@@ -1766,7 +1829,16 @@ class SearchClientPageState extends State<SearchClientPage> {
                 ],
               ),
               ..._transactions.map((transaction) {
-                final isAddition = transaction['type'] == 'إضافة';
+                final isAddition = transaction['type'] == 'إضافة' ||
+                    transaction['type'] == 'قرض';
+                // final amountAll = transaction['type'] == 'إضافة' ||
+                //     transaction['type'] == 'قرض';
+                if (isAddition) {
+                  tupeAllMomnt += transaction['amount'];
+                } else {
+                  tupeAllMomnt -= transaction['amount'];
+                }
+                //  amountAll   tupeAllMomnt
                 return pw.TableRow(
                   children: [
                     pw.Text(
@@ -1792,7 +1864,20 @@ class SearchClientPageState extends State<SearchClientPage> {
                       ),
                     ),
                     pw.Text(
-                      transaction['amount'].toString(),
+                      DatabaseHelper().getNumberFormat(tupeAllMomnt),
+                      // tupeAllMomnt.toString(),
+                      style: pw.TextStyle(
+                        font: arabicFont,
+                        fontWeight: pw.FontWeight.bold,
+                        fontSize: 18,
+                        color: isAddition ? PdfColors.red : PdfColors.green,
+                      ),
+                      textDirection: pw.TextDirection.rtl,
+                      textAlign: pw.TextAlign.center,
+                    ),
+                    pw.Text(
+                      DatabaseHelper().getNumberFormat(transaction['amount']),
+                      // transaction['amount'].toString(),
                       style: pw.TextStyle(
                         font: arabicFont,
                         fontWeight: pw.FontWeight.bold,
@@ -1821,7 +1906,7 @@ class SearchClientPageState extends State<SearchClientPage> {
                   decoration: const pw.BoxDecoration(color: PdfColors.grey300),
                   children: [
                     pw.Text(
-                      'إجمالي الإضافات',
+                      'إجمالي الديون',
                       style: pw.TextStyle(
                         font: arabicFont,
                         fontWeight: pw.FontWeight.bold,
@@ -1831,7 +1916,7 @@ class SearchClientPageState extends State<SearchClientPage> {
                       textAlign: pw.TextAlign.center,
                     ),
                     pw.Text(
-                      'إجمالي التسديدات',
+                      'إجمالي الديون المسددة',
                       style: pw.TextStyle(
                         font: arabicFont,
                         fontWeight: pw.FontWeight.bold,
@@ -1858,7 +1943,8 @@ class SearchClientPageState extends State<SearchClientPage> {
                       totalAdditions.toString(),
                       style: pw.TextStyle(
                         font: arabicFont,
-                        fontSize: 14,
+                        fontSize: 18,
+                        color: PdfColors.red700,
                       ),
                       textDirection: pw.TextDirection.rtl,
                       textAlign: pw.TextAlign.center,
@@ -2342,16 +2428,6 @@ class SearchClientPageState extends State<SearchClientPage> {
 
 // ==================
 }
-
-
-
-
-
-
-
-
-
-
 
 /* import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

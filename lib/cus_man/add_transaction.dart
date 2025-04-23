@@ -1131,7 +1131,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     }
   }
 
-//  =========  تعديل عملية ===========
+/* //  =========  تعديل عملية ===========
   Future<void> _editTransaction(Map<String, dynamic> transaction) async {
     // التحقق من وجود المفاتيح المتوقعة
     if (!transaction.containsKey('amount') ||
@@ -1503,7 +1503,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       },
     );
   }
-
+ */
   //  =========   حقل البحث ===========
   Widget _buildSearchField() {
     return Container(
@@ -2817,6 +2817,362 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       ),
     );
   }
+
+  Future<void> _editTransaction(Map<String, dynamic> transaction) async {
+    if (!transaction.containsKey('amount') ||
+        !transaction.containsKey('details') ||
+        !transaction.containsKey('type')) {
+      return;
+    }
+
+    final isCustomers = _selectedView == 'customers';
+    final primaryColor =
+        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
+    final lightColor =
+        isCustomers ? Colors.blue.shade100 : Colors.orange.shade100;
+
+    final amountController =
+        TextEditingController(text: transaction['amount'].toString());
+    final detailsController =
+        TextEditingController(text: transaction['details']);
+    String selectedType = transaction['type'];
+    String typeLabel = isCustomers ? 'إضافة' : 'قرض';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                primaryColor,
+                                primaryColor.withOpacity(0.8)
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.edit,
+                                  size: 32, color: Colors.white),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'تعديل العملية',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Form Fields
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              /*      // Amount Field
+                            TextFormField(
+                              controller: amountController,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'المبلغ',
+                                labelStyle:
+                                    TextStyle(color: Colors.grey.shade600),
+                                floatingLabelStyle: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                prefixIcon: Icon(Icons.attach_money,
+                                    color: primaryColor),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: primaryColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                      color: primaryColor, width: 1.5),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide:
+                                      BorderSide(color: primaryColor, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 16),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          */
+                              _buildInputField(
+                                controller: amountController,
+                                label: 'المبلغ',
+                                icon: Icons.attach_money,
+                                keyboardType: TextInputType.number,
+                                textInputAction: TextInputAction.next,
+                                // onEditingComplete: () => FocusScope.of(context).unfocus(),
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                controller: detailsController,
+                                label: 'تفاصيل العملية',
+                                icon: Icons.description,
+                                onEditingComplete: () =>
+                                    FocusScope.of(context).nextFocus(),
+                                textInputAction: TextInputAction.done,
+                              ),
+                              /*  // Details Field
+                            TextFormField(
+                              controller: detailsController,
+                              decoration: InputDecoration(
+                                labelText: 'التفاصيل',
+                                labelStyle:
+                                    TextStyle(color: Colors.grey.shade600),
+                                floatingLabelStyle: TextStyle(
+                                  color: primaryColor,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                prefixIcon: Icon(Icons.description,
+                                    color: primaryColor),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(color: primaryColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide(
+                                      color: primaryColor, width: 1.5),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide:
+                                      BorderSide(color: primaryColor, width: 2),
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 14, horizontal: 16),
+                              ),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                           */
+                              const SizedBox(height: 16),
+
+                              // Transaction Type
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildTransactionTypeButton(
+                                    label: typeLabel,
+                                    isSelected: selectedType == typeLabel,
+                                    color: Colors.red,
+                                    onTap: () => setState(
+                                        () => selectedType = typeLabel),
+                                  ),
+                                  _buildTransactionTypeButton(
+                                    label: 'تسديد',
+                                    isSelected: selectedType == 'تسديد',
+                                    color: Colors.green,
+                                    onTap: () =>
+                                        setState(() => selectedType = 'تسديد'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Buttons
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'إلغاء',
+                                  icon: Icons.close,
+                                  color: Colors.red.shade600,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'حفظ',
+                                  icon: Icons.save_as_outlined,
+                                  color: Colors.green.shade600,
+                                  onPressed: () async {
+                                    if (amountController.text.isEmpty ||
+                                        detailsController.text.isEmpty) {
+                                      _showErrorMessage(
+                                          'يرجى تعبئة جميع الحقول');
+                                      return;
+                                    }
+
+                                    try {
+                                      final databaseHelper = DatabaseHelper();
+                                      int rowsAffected = 0;
+
+                                      if (isCustomers) {
+                                        rowsAffected = await databaseHelper
+                                            .updateOperation(
+                                          transaction['operation_id'],
+                                          double.parse(amountController.text),
+                                          detailsController.text,
+                                          selectedType,
+                                        );
+                                      } else {
+                                        rowsAffected = await databaseHelper
+                                            .updateAgentOperation(
+                                          transaction['operation_id'],
+                                          double.parse(amountController.text),
+                                          detailsController.text,
+                                          selectedType,
+                                        );
+                                      }
+
+                                      if (rowsAffected > 0 && mounted) {
+                                        Navigator.of(context).pop();
+                                        await fetchTransactions();
+                                        _showSuccessMessage(
+                                            'تم تعديل العملية بنجاح');
+                                      } else {
+                                        _showErrorMessage(
+                                            'فشل في تعديل العملية');
+                                      }
+                                    } catch (error) {
+                                      _showErrorMessage(
+                                          'حدث خطأ أثناء تعديل العملية');
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+/* // دالة مساعدة لإنشاء أزرار نوع العملية
+Widget _buildTransactionTypeButton({
+  required String label,
+  required bool isSelected,
+  required Color color,
+  required VoidCallback onTap,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? color : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: isSelected ? Colors.white : color,
+        ),
+      ),
+    ),
+  );
+}
+
+// دالة مساعدة لإنشاء أزرار التحكم
+Widget _buildActionButton({
+  required String label,
+  required IconData icon,
+  required Color color,
+  required VoidCallback onPressed,
+}) {
+  return ElevatedButton(
+    onPressed: onPressed,
+    style: ElevatedButton.styleFrom(
+      backgroundColor: color,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+      elevation: 2,
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 20, color: Colors.white),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+ */
 }
 
 // ===================================
