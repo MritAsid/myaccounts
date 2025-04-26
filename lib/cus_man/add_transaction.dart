@@ -46,14 +46,13 @@ class AddTransactionPageState extends State<AddTransactionPage> {
   List<Map<String, dynamic>> _recentCustomerTransactions = [];
   List<Map<String, dynamic>> _recentAgentTransactions = [];
 
-  // // =========  تفاعلات الواجهة الواجهه  ===========
+  // =========  تفاعلات الواجهة الواجهه  ===========
   @override
   void initState() {
     super.initState();
     selectedTypeFull = 'اليوم';
 
     _fetchTransactionsByDate(DateTime.now());
-    // _fetchAgentTransactionsByDate(DateTime.now());
     // تحريك المؤشر إلى نهاية النص عند التركيز على الحقل
     _nameFocusNode.addListener(() {
       if (_nameFocusNode.hasFocus) {
@@ -93,8 +92,106 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     super.dispose();
   }
 
-// ============ اضافة عمليه  ================
-// ========= استرجاع الاسماء للعملاء===========
+/*
+   =======================================
+        $$$== استرجاع العمليات ==$$$
+   =======================================
+*/
+// جلب العمليات   بناءً على التاريخ المحدد
+  Future<void> _fetchTransactionsByDate(DateTime date) async {
+    final transactions = await DatabaseHelper().getOperationsByDate(date);
+    final transactionsAg =
+        await DatabaseHelper().getAgentOperationsByDate(date);
+
+    setState(() {
+      _recentCustomerTransactions = transactions;
+      _recentAgentTransactions = transactionsAg;
+      _selectedDate = date;
+    });
+  }
+
+// جلب العمليات للأسبوع الحالي
+  Future<void> _fetchTransactionsByWeek() async {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final transactions = await DatabaseHelper().getOperationsByDateRange(
+      startOfWeek,
+      now,
+    );
+    final transactionsAg = await DatabaseHelper().getAgentOperationsByDateRange(
+      startOfWeek,
+      now,
+    );
+    setState(() {
+      _recentCustomerTransactions = transactions;
+      _recentAgentTransactions = transactionsAg;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+// جلب العمليات للشهر الحالي أو شهر معين
+  Future<void> _fetchTransactionsByMonth(DateTime date) async {
+    final startOfMonth = DateTime(date.year, date.month, 1);
+    final endOfMonth = DateTime(date.year, date.month + 1, 0);
+    final transactions = await DatabaseHelper().getOperationsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+    final transactionsAg = await DatabaseHelper().getAgentOperationsByDateRange(
+      startOfMonth,
+      endOfMonth,
+    );
+    setState(() {
+      _recentCustomerTransactions = transactions;
+      _recentAgentTransactions = transactionsAg;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+  // جلب كل العمليات
+  Future<void> _fetchAllTransactions() async {
+    final transactionsCu = await DatabaseHelper().getAllOperations();
+    final transactionsAg = await DatabaseHelper().getAgentAllOperations();
+    setState(() {
+      _recentCustomerTransactions = transactionsCu;
+      _recentAgentTransactions = transactionsAg;
+      _selectedDate = null; // لا يوجد تاريخ محدد
+    });
+  }
+
+//  ========= تحديث الواجهه ===========
+  Future<void> fetchTransactions() async {
+    if (_selectedDate != null) {
+      await _fetchTransactionsByDate(_selectedDate!);
+    } else if (_startDate != null && _endDate != null) {
+      // إذا كان هناك نطاق زمني محدد (_startDate و _endDate)
+      final transactions = await DatabaseHelper().getOperationsByDateRange(
+        _startDate!,
+        _endDate!,
+      );
+      final transactionsAg =
+          await DatabaseHelper().getAgentOperationsByDateRange(
+        _startDate!,
+        _endDate!,
+      );
+      setState(() {
+        _recentCustomerTransactions = transactions;
+        _recentAgentTransactions = transactionsAg;
+
+        _selectedDate = null; // إعادة تعيين التاريخ المحدد
+      });
+    } else {
+      // إذا لم يتم تحديد أي تاريخ أو نطاق زمني
+      await _fetchAllTransactions();
+    }
+  }
+
+/*
+   =======================================
+        $$$++ اضافة العمليات ++$$$
+   =======================================
+*/
+  //   استرجاع الاسماء للعملاء
   void _searchClients(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -108,7 +205,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     });
   }
 
-// ========= استرجاع الاسماء للوكلاء===========
+  //   استرجاع الاسماء للوكلاء
   void _searchAgents(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -122,7 +219,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     });
   }
 
-//  ========= نافذة اختيار  الاضافة لعميل او لوكيل  ===========
+  //    نافذة اختيار  الاضافة لعميل او لوكيل
   void _showAddOperationDialog() {
     showDialog(
       context: context,
@@ -189,7 +286,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// ===============   نافذة اضافة عملية  ==================
+  //     نافذة اضافة عملية
   void _showAddCustomerOperationDialog() {
     setState(() {
       matchingClients = []; // إعادة تعيين القائمة المقترحة
@@ -249,7 +346,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// ===============  انشاء الحقوال والقائمة المشابهة ==================
+  //    انشاء الحقوال والقائمة المشابهة
   Widget _buildNameFieldWithSuggestions(
       void Function(void Function()) setState) {
     final primaryColor =
@@ -328,39 +425,8 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                 icon: Icons.attach_money,
                 keyboardType: TextInputType.number,
                 textInputAction: TextInputAction.next,
-                // onEditingComplete: () => FocusScope.of(context).unfocus(),
               ),
-              /*    // حقل المبلغ
-              TextFormField(
-                controller: _amountController,
-                focusNode: _amountFocusNode,
-                textInputAction: TextInputAction.next,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'المبلغ',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  floatingLabelStyle: TextStyle(
-                    color: primaryColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: primaryColor, width: 2),
-                  ),
-                ),
-              ),
-              */
+
               const SizedBox(height: 14),
 
               _buildInputField(
@@ -371,36 +437,6 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                 textInputAction: TextInputAction.done,
               ),
               // حقل التفاصيل
-              /*  TextFormField(
-                controller: _detailsController,
-                focusNode: _detailsFocusNode,
-                textInputAction: TextInputAction.done,
-                onFieldSubmitted: (_) => FocusScope.of(context).unfocus(),
-                decoration: InputDecoration(
-                  labelText: 'تفاصيل العملية',
-                  labelStyle: TextStyle(color: Colors.grey.shade600),
-                  floatingLabelStyle: TextStyle(
-                    color: primaryColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: borderColor, width: 1.5),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: primaryColor, width: 2),
-                  ),
-                ),
-              ),
-               */
               const SizedBox(height: 18),
 
               // أزرار نوع العملية
@@ -475,12 +511,13 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 0),
+                            horizontal: 16,
+                          ),
                           title: Text(
                             client['name'],
                             textAlign: TextAlign.right,
                             style: const TextStyle(
-                              fontSize: 16,
+                              fontSize: 13.5,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -522,6 +559,8 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                   border: Border.all(color: borderColor, width: 1.5),
                 ),
                 child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
                   itemCount: matchingAgents.length,
                   itemBuilder: (context, index) {
                     final agent = matchingAgents[index];
@@ -529,15 +568,14 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                       children: [
                         ListTile(
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8.0,
-                            vertical: 4.0,
+                            horizontal: 16.0,
                           ),
                           title: Text(
                             agent['name'],
                             textAlign: TextAlign.right,
                             style: const TextStyle(
-                              fontSize: 16.0,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                           onTap: () {
@@ -565,110 +603,59 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// دالة مساعدة لإنشاء حقول الإدخال بنفس النمط
-  Widget _buildInputField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    TextInputType keyboardType = TextInputType.text,
-    TextInputAction textInputAction = TextInputAction.next,
-    VoidCallback? onEditingComplete,
-  }) {
-    return TextField(
-      controller: controller,
-      autofocus: true,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle:
-            const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-        prefixIcon: Icon(icon,
-            color: _saveTtansaAccount
-                ? Colors.blue.shade400
-                : Colors.orange.shade400),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.grey),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-              color: _saveTtansaAccount
-                  ? Colors.blue.shade400
-                  : Colors.orange.shade400,
-              width: 1.5),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-              color: _saveTtansaAccount
-                  ? Colors.blue.shade400
-                  : Colors.orange.shade400,
-              width: 2),
-        ),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        contentPadding:
-            const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-      ),
-      keyboardType: keyboardType,
-      textInputAction: textInputAction,
-      onEditingComplete: onEditingComplete,
-      onTap: () {
-        // ضبط موضع المؤشر عند النقر على الحقل
-        controller.selection = TextSelection.fromPosition(
-          TextPosition(offset: controller.text.length),
-        );
-      },
-      style: const TextStyle(fontSize: 15),
-    );
-  }
-
-// ================  حفظ العملية للعملاء===============
+  //    حفظ العملية للعملاء
   void _saveTransactionToDatabase() async {
     double? amount = double.tryParse(_amountController.text.trim());
     String details = _detailsController.text.trim();
-    // String type = 'كسب';
-    // String detailsNum = '🙎‍♂️ ${_nameController.text}';
 
     if (selectedClientId == null || amount == null || amount <= 0) {
       _showErrorMessage('يرجى اختيار عميل صحيح ومبلغ أكبر من 0');
       return;
     }
-
+    // for (var i = 0; i < 7; i++) {
     await DatabaseHelper().insertOperation(
-      selectedClientId!, // إرسال ID العميل
-      amount,
-      details,
-      _transactionType,
-    );
+          selectedClientId!, // إرسال ID العميل
+          amount,
+          details,
+          _transactionType,
+        );
 
-    // if (_transactionType == 'تسديد') {
-    //   final dbHelper = DatabaseHelper();
-    //   await dbHelper.insertDailyTransaction(amount, detailsNum, type);
-    // }
+    // }   
+
+    /*  if (_transactionType == 'تسديد') {
+      final dbHelper = DatabaseHelper();
+       String type = 'كسب';
+    String detailsNum = '🙎‍♂️ ${_nameController.text}';
+      await dbHelper.insertDailyTransaction(amount, detailsNum, type);
+    } */
     // await _fetchTransactionsByDate(_selectedDate!);
 
-    _nameController.clear();
-    _amountController.clear();
-    _detailsController.clear();
+    // _nameController.clear();
+    // selectedClientId = null;
+    // _amountController.clear();
+    // _detailsController.clear();
     _transactionType = '';
-    // تحديث البيانات بناءً على الصفحة الحالية
-    if (_currentPage == 0) {
-      await fetchTransactions();
-    } else if (_currentPage == 1) {
-      _pageController.animateToPage(0,
-          duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    selectedTypeFull = 'اليوم ';
+    _selectedDate = DateTime.now();
+    _startDate = null;
+    _endDate = null;
+    await _fetchTransactionsByDate(_selectedDate!);
+
+    if (_currentPage == 1) {
+      setState(() {
+        _pageController.animateToPage(0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut);
+      });
     }
 
     _showSuccessMessage('تم حفظ العملية بنجاح');
   }
 
-// ================  حفظ العملية للوكلاء===============
+  //    حفظ العملية للوكلاء
   void _saveAgentOperation() async {
     //  double? amount = double.tryParse(_amountController.text.trim());
     // String details = _detailsController.text.trim();
-    // String type = 'صرف';
-    // String detailsNum = '🙎‍♂️ تسديد  ${_agentNameController.text}';
 
     if (_transactionType.isNotEmpty) {
       double? amount = double.tryParse(_amountController.text.trim());
@@ -686,33 +673,309 @@ class AddTransactionPageState extends State<AddTransactionPage> {
         details,
         _transactionType,
       );
-      // if (_transactionType == 'تسديد') {
-      //   final dbHelper = DatabaseHelper();
-      //   await dbHelper.insertDailyTransaction(amount, detailsNum, type);
-      // }
+/* 
+      if (_transactionType == 'تسديد') {
+         String type = 'صرف';
+    String detailsNum = '🙎‍♂️ تسديد  ${_nameController.text}';
+        final dbHelper = DatabaseHelper();
+        await dbHelper.insertDailyTransaction(amount, detailsNum, type);
+      } */
 
       _nameController.clear();
+      selectedAgentId = null;
       _amountController.clear();
       _detailsController.clear();
       _transactionType = '';
       // تحديث البيانات بناءً على الصفحة الحالية
+      selectedTypeFull = 'اليوم ';
+      _selectedDate = DateTime.now();
+      _startDate = null;
+      _endDate = null;
+      await _fetchTransactionsByDate(_selectedDate!);
+
       if (_currentPage == 0) {
-        _pageController.animateToPage(1,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut);
-      } else if (_currentPage == 1) {
-        await fetchTransactions();
+        setState(() {
+          _pageController.animateToPage(1,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut);
+        });
       }
 
-      // await fetchAgentTransactions(); // جلب عمليات الوكلاء
       _showSuccessMessage('تم حفظ العملية بنجاح');
     } else {
       _showErrorMessage('يرجى اختيار نوع العملية');
     }
   }
 
-  // ============ تصفيت العرض =================
-//  عرض خيارات العرض
+/*
+   =======================================
+    $$$✍✍ التحكم في العمليات ✍✍$$$
+   =======================================
+*/
+  //   حذف عملية
+  void _deleteTransaction(Map<String, dynamic> transaction) async {
+    // احصل على معرف العملية
+    final int? transactionId = transaction['operation_id'];
+
+    if (transactionId == null) {
+      _showErrorMessage('العملية المحددة غير صالحة للحذف');
+
+      return;
+    }
+
+    try {
+      // احصل على المثيل
+      final databaseHelper = DatabaseHelper();
+      int rowsAffected = 0;
+
+      if (_selectedView == 'customers') {
+        // حذف العملية من جدول العملاء
+        rowsAffected = await databaseHelper.deleteOperation(transactionId);
+      } else if (_selectedView == 'agents') {
+        // حذف العملية من جدول الوكلاء
+        rowsAffected = await databaseHelper.deleteAgentOperation(transactionId);
+      }
+
+      if (rowsAffected > 0) {
+        await fetchTransactions();
+
+        _showSuccessMessage('تم حذف العملية بنجاح');
+      } else {
+        _showErrorMessage('فشل في حذف العملية');
+      }
+    } catch (error) {
+      _showErrorMessage('حدث خطأ أثناء حذف العملية');
+    }
+  }
+
+  //   تعديل عملية
+  Future<void> _editTransaction(Map<String, dynamic> transaction) async {
+    if (!transaction.containsKey('amount') ||
+        !transaction.containsKey('details') ||
+        !transaction.containsKey('type')) {
+      return;
+    }
+
+    final isCustomers = _selectedView == 'customers';
+    final primaryColor =
+        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
+
+    final amountController =
+        TextEditingController(text: transaction['amount'].toString());
+    final detailsController =
+        TextEditingController(text: transaction['details']);
+    String selectedType = transaction['type'];
+    String typeLabel = isCustomers ? 'إضافة' : 'قرض';
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Directionality(
+              textDirection: TextDirection.rtl,
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.all(16),
+                child: SingleChildScrollView(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Header
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                primaryColor,
+                                primaryColor.withOpacity(0.8)
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(16),
+                              topRight: Radius.circular(16),
+                            ),
+                          ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.edit,
+                                  size: 32, color: Colors.white),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'تعديل العملية',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Form Fields
+                        Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            children: [
+                              _buildInputField(
+                                controller: amountController,
+                                label: 'المبلغ',
+                                icon: Icons.attach_money,
+                                keyboardType: TextInputType.number,
+                                textInputAction: TextInputAction.next,
+                              ),
+                              const SizedBox(height: 16),
+                              _buildInputField(
+                                controller: detailsController,
+                                label: 'تفاصيل العملية',
+                                icon: Icons.description,
+                                onEditingComplete: () =>
+                                    FocusScope.of(context).nextFocus(),
+                                textInputAction: TextInputAction.done,
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Transaction Type
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceEvenly,
+                                children: [
+                                  _buildTransactionTypeButton(
+                                    label: typeLabel,
+                                    isSelected: selectedType == typeLabel,
+                                    color: Colors.red,
+                                    onTap: () => setState(
+                                        () => selectedType = typeLabel),
+                                  ),
+                                  _buildTransactionTypeButton(
+                                    label: 'تسديد',
+                                    isSelected: selectedType == 'تسديد',
+                                    color: Colors.green,
+                                    onTap: () =>
+                                        setState(() => selectedType = 'تسديد'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Action Buttons
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'إلغاء',
+                                  icon: Icons.close,
+                                  color: Colors.red.shade600,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'حفظ',
+                                  icon: Icons.save_as_outlined,
+                                  color: Colors.green.shade600,
+                                  onPressed: () async {
+                                    if (amountController.text.isEmpty ||
+                                        detailsController.text.isEmpty) {
+                                      _showErrorMessage(
+                                          'يرجى تعبئة جميع الحقول');
+                                      return;
+                                    }
+
+                                    try {
+                                      final databaseHelper = DatabaseHelper();
+                                      int rowsAffected = 0;
+
+                                      if (isCustomers) {
+                                        rowsAffected = await databaseHelper
+                                            .updateOperation(
+                                          transaction['operation_id'],
+                                          double.parse(amountController.text),
+                                          detailsController.text,
+                                          selectedType,
+                                        );
+                                      } else {
+                                        rowsAffected = await databaseHelper
+                                            .updateAgentOperation(
+                                          transaction['operation_id'],
+                                          double.parse(amountController.text),
+                                          detailsController.text,
+                                          selectedType,
+                                        );
+                                      }
+
+                                      if (rowsAffected > 0 && mounted) {
+                                        Navigator.of(context).pop();
+                                        await fetchTransactions();
+                                        _showSuccessMessage(
+                                            'تم تعديل العملية بنجاح');
+                                      } else {
+                                        _showErrorMessage(
+                                            'فشل في تعديل العملية');
+                                      }
+                                    } catch (error) {
+                                      _showErrorMessage(
+                                          'حدث خطأ أثناء تعديل العملية');
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+/*
+   =======================================
+    $$$((دوال لانشاء الواجهات))$$$
+   =======================================
+*/
+  //  نافذة   اختيار التاريخ
+  Future<void> _selectDateViwe(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      await _fetchTransactionsByDate(picked);
+    }
+  }
+
+  //  نافذة اختيار زمن عرض العمليات
   Future<void> _selectDate(BuildContext context) async {
     showDialog(
         context: context,
@@ -774,6 +1037,8 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                             Navigator.pop(context);
                             await _selectDateViwe(context);
                             selectedTypeFull = 'عرض عمليات يوم';
+                            _startDate = null;
+                            _endDate = null;
                           },
                         ),
                         _buildOptionTile(
@@ -895,109 +1160,166 @@ class AddTransactionPageState extends State<AddTransactionPage> {
         });
   }
 
-//  فتح جدول اختيار التاريخ
-  Future<void> _selectDateViwe(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      await _fetchTransactionsByDate(picked);
-    }
-  }
+  //  نافذة ملخص العمليات
+  Future<void> _showSummaryDialog(BuildContext context) async {
+    Map<String, double> summary;
+    final isCustomers = _selectedView == 'customers';
+    final primaryColor =
+        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
 
-// جلب العمليات   بناءً على التاريخ المحدد
-  Future<void> _fetchTransactionsByDate(DateTime date) async {
-    final transactions = await DatabaseHelper().getOperationsByDate(date);
-    final transactionsAg =
-        await DatabaseHelper().getAgentOperationsByDate(date);
+    String typeText = isCustomers ? ' اجمالي الديون' : 'اجمالي القروض';
+    String boxText = isCustomers ? 'حالة صندوق العملاء' : 'حالة صندوق الموردين';
 
-    setState(() {
-      _recentCustomerTransactions = transactions;
-      _recentAgentTransactions = transactionsAg;
-      _selectedDate = date;
-    });
-  }
-
-  // جلب كل العمليات
-  Future<void> _fetchAllTransactions() async {
-    final transactionsCu = await DatabaseHelper().getAllOperations();
-    final transactionsAg = await DatabaseHelper().getAgentAllOperations();
-    setState(() {
-      _recentCustomerTransactions = transactionsCu;
-      _recentAgentTransactions = transactionsAg;
-      _selectedDate = null; // لا يوجد تاريخ محدد
-    });
-  }
-
-// جلب العمليات للأسبوع الحالي
-  Future<void> _fetchTransactionsByWeek() async {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final transactions = await DatabaseHelper().getOperationsByDateRange(
-      startOfWeek,
-      now,
-    );
-    final transactionsAg = await DatabaseHelper().getAgentOperationsByDateRange(
-      startOfWeek,
-      now,
-    );
-    setState(() {
-      _recentCustomerTransactions = transactions;
-      _recentAgentTransactions = transactionsAg;
-      _selectedDate = null; // لا يوجد تاريخ محدد
-    });
-  }
-
-// جلب العمليات للشهر الحالي أو شهر معين
-  Future<void> _fetchTransactionsByMonth(DateTime date) async {
-    final startOfMonth = DateTime(date.year, date.month, 1);
-    final endOfMonth = DateTime(date.year, date.month + 1, 0);
-    final transactions = await DatabaseHelper().getOperationsByDateRange(
-      startOfMonth,
-      endOfMonth,
-    );
-    final transactionsAg = await DatabaseHelper().getAgentOperationsByDateRange(
-      startOfMonth,
-      endOfMonth,
-    );
-    setState(() {
-      _recentCustomerTransactions = transactions;
-      _recentAgentTransactions = transactionsAg;
-      _selectedDate = null; // لا يوجد تاريخ محدد
-    });
-  }
-
-//  ========= تحديث الواجهه ===========
-  Future<void> fetchTransactions() async {
     if (_selectedDate != null) {
-      await _fetchTransactionsByDate(_selectedDate!);
+      summary = isCustomers
+          ? await DatabaseHelper().getSummaryByDateDey(_selectedDate!)
+          : await DatabaseHelper().getAgentSummaryByDate(_selectedDate!);
     } else if (_startDate != null && _endDate != null) {
-      // إذا كان هناك نطاق زمني محدد (_startDate و _endDate)
-      final transactions = await DatabaseHelper().getOperationsByDateRange(
-        _startDate!,
-        _endDate!,
-      );
-      final transactionsAg =
-          await DatabaseHelper().getAgentOperationsByDateRange(
-        _startDate!,
-        _endDate!,
-      );
-      setState(() {
-        _recentCustomerTransactions = transactions;
-        _recentAgentTransactions = transactionsAg;
-
-        _selectedDate = null; // إعادة تعيين التاريخ المحدد
-      });
+      summary = isCustomers
+          ? await DatabaseHelper().getSummaryByDateRange(_startDate!, _endDate!)
+          : await DatabaseHelper()
+              .getSummaryAgentByDateRange(_startDate!, _endDate!);
     } else {
-      // إذا لم يتم تحديد أي تاريخ أو نطاق زمني
-      await _fetchAllTransactions();
+      summary = isCustomers
+          ? await DatabaseHelper().getSummaryForAllOperations()
+          : await DatabaseHelper().getSummaryAgentForAllOperations();
     }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(16),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.15),
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(16),
+                      topRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.summarize,
+                          size: 28, color: Colors.white),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'ملخص العمليات ',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '$selectedTypeFull ',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          if (_selectedDate != null)
+                            Text(
+                              _selectedDate!.toLocal().toString().split(' ')[0],
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Summary Cards
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildSummaryCard(
+                        icon: Icons.payment,
+                        title: 'التسديدات',
+                        value: DatabaseHelper()
+                            .getNumberFormat(summary['total_payments']!),
+                        color: Colors.green.shade100,
+                        valueColor: Colors.green.shade700,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildSummaryCard(
+                        icon: isCustomers ? Icons.money_off : Icons.money,
+                        title: typeText,
+                        value: DatabaseHelper()
+                            .getNumberFormat(summary['total_additions']!),
+                        color: Colors.red.shade100,
+                        valueColor: Colors.red.shade700,
+                      ),
+                      const SizedBox(height: 8),
+                      _buildSummaryCard(
+                        icon: Icons.account_balance_wallet,
+                        title: boxText,
+                        value: DatabaseHelper()
+                            .getNumberFormat(summary['balance']!),
+                        color: summary['balance']! >= 0
+                            ? Colors.green.shade100
+                            : Colors.red.shade100,
+                        valueColor: summary['balance']! >= 0
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                        valueSize: 22,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Close Button
+                Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: 16, left: 16, right: 16),
+                  child: _buildActionButton(
+                    label: 'إغلاق',
+                    icon: Icons.close,
+                    color: primaryColor,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
-//  =========  انشاء عمود معلومات ===========
+  //     انشاء عمود معلومات  وفتح تفاصيل العمليات
   Widget _buildInfoCell(Map<String, dynamic> transaction) {
     Color iconColor =
         (transaction['type'] == 'قرض' || transaction['type'] == 'إضافة')
@@ -1018,547 +1340,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-  void _showSuccessMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.check_circle,
-              color: Colors.white,
-              size: 24,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green.shade700,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 6, // إضافة ظل للرسالة
-        margin: const EdgeInsets.all(16), // هامش حول الرسالة
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-  void _showErrorMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(
-              Icons.error_outline,
-              color: Colors.white,
-              size: 24,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.red.shade700,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 6, // إضافة ظل للرسالة
-        margin: const EdgeInsets.all(16), // هامش حول الرسالة
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      ),
-    );
-  }
-
-// ========= حذف عملية ===========
-  void _deleteTransaction(Map<String, dynamic> transaction) async {
-    // احصل على معرف العملية
-    final int? transactionId = transaction['operation_id'];
-
-    if (transactionId == null) {
-      _showErrorMessage('العملية المحددة غير صالحة للحذف');
-
-      return;
-    }
-
-    try {
-      // احصل على المثيل
-      final databaseHelper = DatabaseHelper();
-
-      int rowsAffected = 0;
-
-      if (_selectedView == 'customers') {
-        // حذف العملية من جدول العملاء
-        rowsAffected = await databaseHelper.deleteOperation(transactionId);
-      } else if (_selectedView == 'agents') {
-        // حذف العملية من جدول الوكلاء
-        rowsAffected = await databaseHelper.deleteAgentOperation(transactionId);
-      }
-
-      if (rowsAffected > 0) {
-        // تحديث العمليات بناءً على نوع العرض الحالي
-        // if (_selectedView == 'customers') {
-        await fetchTransactions();
-        // } else if (_selectedView == 'agents') {
-        // await fetchAgentTransactions(); // تحديث عمليات الوكلاء
-        // }
-        _showSuccessMessage('تم حذف العملية بنجاح');
-      } else {
-        _showErrorMessage('فشل في حذف العملية');
-      }
-    } catch (error) {
-      _showErrorMessage('حدث خطأ أثناء حذف العملية');
-    }
-  }
-
-/* //  =========  تعديل عملية ===========
-  Future<void> _editTransaction(Map<String, dynamic> transaction) async {
-    // التحقق من وجود المفاتيح المتوقعة
-    if (!transaction.containsKey('amount') ||
-        !transaction.containsKey('details') ||
-        !transaction.containsKey('type')) {
-      return;
-    }
-
-    // التحقق من أن القيم غير null
-    if (transaction['amount'] == null ||
-        transaction['details'] == null ||
-        transaction['type'] == null) {
-      return;
-    }
-
-    // إنشاء controllers وتعيين القيم
-    final TextEditingController amountController =
-        TextEditingController(text: transaction['amount'].toString());
-    final TextEditingController detailsController =
-        TextEditingController(text: transaction['details']);
-    String selectedType = transaction['type']; // النوع الحالي
-    String teypTrens = _selectedView == 'customers' ? 'إضافة' : 'قرض';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: Dialog(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0),
-                ),
-                elevation: 10, // إضافة ظل للنافذة
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // العنوان
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12.0),
-                        decoration: BoxDecoration(
-                          color: _selectedView == 'customers'
-                              ? Colors.blue
-                              : Colors.orange,
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(12.0),
-                            topRight: Radius.circular(12.0),
-                          ),
-                        ),
-                        child: const Text(
-                          'تعديل العملية',
-                          style: TextStyle(
-                            fontSize: 18.0,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-
-                      // مربع بحواف زرقاء
-                      Container(
-                        padding: const EdgeInsets.all(16.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            top: BorderSide(
-                                color: _selectedView == 'customers'
-                                    ? Colors.blue
-                                    : Colors.orange,
-                                width: 2.0),
-                            bottom: BorderSide(
-                                color: _selectedView == 'customers'
-                                    ? Colors.blue
-                                    : Colors.orange,
-                                width: 2.0),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 10.0),
-
-                            // حقل تعديل المبلغ
-                            TextField(
-                              controller: amountController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'المبلغ',
-                                labelStyle: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800),
-                                border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: _selectedView == 'customers'
-                                        ? Colors.blue
-                                        : Colors.orange,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: _selectedView == 'customers'
-                                          ? Colors.blue
-                                          : Colors.orange,
-                                      width: 2),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: _selectedView == 'customers'
-                                          ? Colors.blue
-                                          : Colors.orange,
-                                      width: 2),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(height: 20.0),
-
-                            // حقل تعديل التفاصيل
-                            TextField(
-                              controller: detailsController,
-                              decoration: InputDecoration(
-                                labelText: 'التفاصيل',
-                                labelStyle: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w800),
-                                border: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: _selectedView == 'customers'
-                                        ? Colors.blue
-                                        : Colors.orange,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: _selectedView == 'customers'
-                                          ? Colors.blue
-                                          : Colors.orange,
-                                      width: 2),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderSide: BorderSide(
-                                      color: _selectedView == 'customers'
-                                          ? Colors.blue
-                                          : Colors.orange,
-                                      width: 2),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(height: 10.0),
-                          ],
-                        ),
-                      ),
-
-                      // اختيار نوع العملية
-                      Container(
-                        padding: const EdgeInsets.all(10.0),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFECE8E8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // الخيار الأول
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedType = teypTrens;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.fromLTRB(20.0, 10.0,
-                                    20.0, 10.0), // تعديل الحشوة لتناسب النص فقط
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFFFF665B),
-                                    width: 2.0,
-                                  ),
-                                  color: selectedType == teypTrens
-                                      ? Colors.red
-                                      : Colors.white, // تغيير لون الخلفية
-                                ),
-                                child: Text(
-                                  teypTrens,
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w800,
-                                    color: selectedType == teypTrens
-                                        ? Colors.white
-                                        : Colors.black, // تغيير لون النص
-                                  ),
-                                ),
-                              ),
-                            ),
-
-                            // الخيار الثاني
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedType = 'تسديد';
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.fromLTRB(20.0, 10.0,
-                                    20.0, 10.0), // تعديل الحشوة لتناسب النص فقط
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: const Color(0xFF70FF75),
-                                    width: 2.0,
-                                  ),
-                                  color: selectedType == 'تسديد'
-                                      ? Colors.green
-                                      : Colors.white, // تغيير لون الخلفية
-                                ),
-                                child: Text(
-                                  'تسديد',
-                                  style: TextStyle(
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.w800,
-                                    color: selectedType == 'تسديد'
-                                        ? Colors.white
-                                        : Colors.black, // تغيير لون النص
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // أزرار الحفظ والإلغاء
-                      Container(
-                        padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            top: BorderSide(
-                              width: 2,
-                              color: _selectedView == 'customers'
-                                  ? Colors.blue
-                                  : Colors.orange,
-                            ),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.redAccent,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                elevation: 4,
-                              ),
-                              child: const Text(
-                                'إلغاء',
-                                style: TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () async {
-                                if (amountController.text.isEmpty ||
-                                    detailsController.text.isEmpty) {
-                                  _showErrorMessage('يرجى تعبئة جميع الحقول');
-                                  return;
-                                }
-
-                                try {
-                                  final databaseHelper = DatabaseHelper();
-
-                                  int rowsAffected = 0;
-
-                                  if (_selectedView == 'customers') {
-                                    rowsAffected =
-                                        await databaseHelper.updateOperation(
-                                      transaction['operation_id'],
-                                      double.parse(amountController.text),
-                                      detailsController.text,
-                                      selectedType,
-                                    );
-                                  } else if (_selectedView == 'agents') {
-                                    rowsAffected = await databaseHelper
-                                        .updateAgentOperation(
-                                      transaction['operation_id'],
-                                      double.parse(amountController.text),
-                                      detailsController.text,
-                                      selectedType,
-                                    );
-                                  }
-
-                                  if (rowsAffected > 0) {
-                                    // التحقق من أن الـ BuildContext لا يزال صالحًا
-                                    if (!mounted) return;
-                                    Navigator.of(context).pop();
-                                    // if (_selectedView == 'customers') {
-                                    await fetchTransactions();
-                                    // } else if (_selectedView == 'agents') {
-                                    //   await fetchAgentTransactions();
-                                    // }
-
-                                    _showSuccessMessage(
-                                        'تم تعديل العملية بنجاح');
-                                  } else {
-                                    _showErrorMessage('فشل في تعديل العملية');
-                                  }
-                                } catch (error) {
-                                  _showErrorMessage(
-                                      'حدث خطأ أثناء تعديل العملية');
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: _selectedView == 'customers'
-                                    ? Colors.blue
-                                    : Colors.orange,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 5),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                elevation: 4,
-                              ),
-                              child: const Text(
-                                'حفظ',
-                                style: TextStyle(
-                                    fontSize: 18.0,
-                                    fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10.0),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
- */
-  //  =========   حقل البحث ===========
-  Widget _buildSearchField() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(80.0, 8.0, 8.0, 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20.0),
-      ),
-      child: TextField(
-        autofocus: true,
-        decoration: InputDecoration(
-          hintText: 'ابحث عن اسم...',
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(20.0),
-            borderSide: BorderSide.none,
-          ),
-          prefixIcon: IconButton(
-            icon: const Icon(Icons.close, color: Colors.redAccent),
-            onPressed: () {
-              setState(() {
-                _isSearchActive = false;
-                _searchQuery = '';
-              });
-            },
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
-        ),
-        onChanged: (query) {
-          setState(() {
-            _searchQuery = query; // تحديث نص البحث
-          });
-        },
-      ),
-    );
-  }
-
-  //  ========= تطبيق الفلتره ===========
-  List<Map<String, dynamic>> _filterTransactions(
-      List<Map<String, dynamic>> transactions, String view) {
-    if (_searchQuery.isEmpty) {
-      return transactions; // إرجاع جميع البيانات إذا كان نص البحث فارغًا
-    }
-
-    final query = _searchQuery.toLowerCase();
-    return transactions.where((transaction) {
-      final name =
-          transaction[view == 'customers' ? 'client_name' : 'agent_name']
-              ?.toString()
-              .toLowerCase();
-      return name?.contains(query) ?? false;
-    }).toList();
-  }
-
-  //  ========= نافذة تفاصيل العملية ===========
+  //    نافذة تفاصيل العملية
   Widget _buildTransactionDetailsDialog(Map<String, dynamic> transaction) {
     final primaryColor = _selectedView == 'customers'
         ? Colors.blue.shade700
@@ -1570,7 +1352,6 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     final teypColor = transaction['type'] == 'تسديد'
         ? Colors.green.shade100
         : Colors.red.shade100;
-    // (transaction['type'] == 'قرض' || transaction['type'] == 'إضافة')
 
     final textType =
         transaction['type'] == 'إضافة' ? 'دين' : transaction['type'];
@@ -1707,7 +1488,6 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                               child: _buildInfoCard(
                                 icon: Icons.type_specimen,
                                 title: 'النوع',
-                                // value: transaction['type'] ?? 'غير معروف',
                                 value: textType,
                                 color: teypColor,
                               ),
@@ -1766,7 +1546,197 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// دالة مساعدة معدلة لإنشاء بطاقات المعلومات (أصغر حجمًا)
+  //      حقل البحث
+  Widget _buildSearchField() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(80.0, 8.0, 8.0, 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20.0),
+      ),
+      child: TextField(
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'ابحث عن اسم...',
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20.0),
+            borderSide: BorderSide.none,
+          ),
+          prefixIcon: IconButton(
+            icon: const Icon(Icons.close, color: Colors.redAccent),
+            onPressed: () {
+              setState(() {
+                _isSearchActive = false;
+                _searchQuery = '';
+              });
+            },
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+        ),
+        onChanged: (query) {
+          setState(() {
+            _searchQuery = query; // تحديث نص البحث
+          });
+        },
+      ),
+    );
+  }
+
+  //     تصفية العمليات على البحث
+  List<Map<String, dynamic>> _filterTransactions(
+      List<Map<String, dynamic>> transactions, String view) {
+    if (_searchQuery.isEmpty) {
+      return transactions; // إرجاع جميع البيانات إذا كان نص البحث فارغًا
+    }
+
+    final query = _searchQuery.toLowerCase();
+    return transactions.where((transaction) {
+      final name =
+          transaction[view == 'customers' ? 'client_name' : 'agent_name']
+              ?.toString()
+              .toLowerCase();
+      return name?.contains(query) ?? false;
+    }).toList();
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.check_circle,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.green.shade700,
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 6, // إضافة ظل للرسالة
+        margin: const EdgeInsets.all(16), // هامش حول الرسالة
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.error_outline,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Colors.red.shade700,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        elevation: 6, // إضافة ظل للرسالة
+        margin: const EdgeInsets.all(16), // هامش حول الرسالة
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
+  }
+
+/*
+   =======================================
+    $$$((دوال مساعده لانشاء الواجهات))$$$
+   =======================================
+*/
+
+  // دالة   لإنشاء حقول الإدخال
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    TextInputAction textInputAction = TextInputAction.next,
+    VoidCallback? onEditingComplete,
+  }) {
+    return TextField(
+      controller: controller,
+      autofocus: true,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle:
+            const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+        prefixIcon: Icon(icon,
+            color: _saveTtansaAccount
+                ? Colors.blue.shade400
+                : Colors.orange.shade400),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.grey),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: _saveTtansaAccount
+                  ? Colors.blue.shade400
+                  : Colors.orange.shade400,
+              width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+              color: _saveTtansaAccount
+                  ? Colors.blue.shade400
+                  : Colors.orange.shade400,
+              width: 2),
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade50,
+        contentPadding:
+            const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      ),
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      onEditingComplete: onEditingComplete,
+      onTap: () {
+        // ضبط موضع المؤشر عند النقر على الحقل
+        controller.selection = TextSelection.fromPosition(
+          TextPosition(offset: controller.text.length),
+        );
+      },
+      style: const TextStyle(fontSize: 15),
+    );
+  }
+
+  // دالة   لإنشاء مربعات المعلومات
   Widget _buildInfoCard({
     required IconData icon,
     required String title,
@@ -1817,7 +1787,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// دالة مساعدة معدلة لإنشاء أزرار التحكم (أصغر حجمًا)
+  // دالة  لإنشاء أزرار التحكم
   Widget _buildActionButton({
     required String label,
     required IconData icon,
@@ -1852,7 +1822,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// دالة مساعدة لإنشاء أزرار نوع العملية
+  // دالة مساعدة لإنشاء أزرار نوع العملية
   Widget _buildTransactionTypeButton({
     required String label,
     required bool isSelected,
@@ -1891,201 +1861,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-//  نافذة ملخص العمليات
-  Future<void> _showSummaryDialog(BuildContext context) async {
-    Map<String, double> summary;
-    final isCustomers = _selectedView == 'customers';
-    final primaryColor =
-        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
-
-    String typeText = isCustomers ? ' اجمالي الديون' : 'اجمالي القروض';
-    String boxText = isCustomers ? 'حالة صندوق العملاء' : 'حالة صندوق الموردين';
-
-    if (_selectedDate != null) {
-      summary = isCustomers
-          ? await DatabaseHelper().getSummaryByDateDey(_selectedDate!)
-          : await DatabaseHelper().getAgentSummaryByDate(_selectedDate!);
-    } else if (_startDate != null && _endDate != null) {
-      summary = isCustomers
-          ? await DatabaseHelper().getSummaryByDateRange(_startDate!, _endDate!)
-          : await DatabaseHelper()
-              .getSummaryAgentByDateRange(_startDate!, _endDate!);
-    } else {
-      summary = isCustomers
-          ? await DatabaseHelper().getSummaryForAllOperations()
-          : await DatabaseHelper().getSummaryAgentForAllOperations();
-    }
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.all(16),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.15),
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [primaryColor, primaryColor.withOpacity(0.8)],
-                    ),
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.summarize,
-                          size: 28, color: Colors.white),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'ملخص العمليات ',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$selectedTypeFull ',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                          if (_selectedDate != null)
-                            Text(
-                              _selectedDate!.toLocal().toString().split(' ')[0],
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                        ],
-                      ),
-                      /*     const SizedBox(height: 8),
-                      if (_startDate != null)
-                        Row(
-                          children: [
-                            Text(
-                              '     من يوم  ',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                            Text(
-                              '${_startDate!.toLocal().toString().split(' ')[0]}     الى يوم    ',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                            Text(
-                              _endDate!.toLocal().toString().split(' ')[0],
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      if (_selectedDate == null && _startDate == null)
-                        Text(
-                          'كل العمليات',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ), */
-                    ],
-                  ),
-                ),
-
-                // Summary Cards
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildSummaryCard(
-                        icon: Icons.payment,
-                        title: 'التسديدات',
-                        value: DatabaseHelper()
-                            .getNumberFormat(summary['total_payments']!),
-                        color: Colors.green.shade100,
-                        valueColor: Colors.green.shade700,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildSummaryCard(
-                        icon: isCustomers ? Icons.money_off : Icons.money,
-                        title: typeText,
-                        value: DatabaseHelper()
-                            .getNumberFormat(summary['total_additions']!),
-                        color: Colors.red.shade100,
-                        valueColor: Colors.red.shade700,
-                      ),
-                      const SizedBox(height: 8),
-                      _buildSummaryCard(
-                        icon: Icons.account_balance_wallet,
-                        title: boxText,
-                        value: DatabaseHelper()
-                            .getNumberFormat(summary['balance']!),
-                        color: summary['balance']! >= 0
-                            ? Colors.green.shade100
-                            : Colors.red.shade100,
-                        valueColor: summary['balance']! >= 0
-                            ? Colors.green.shade700
-                            : Colors.red.shade700,
-                        valueSize: 22,
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Close Button
-                Padding(
-                  padding:
-                      const EdgeInsets.only(bottom: 16, left: 16, right: 16),
-                  child: _buildActionButton(
-                    label: 'إغلاق',
-                    icon: Icons.close,
-                    color: primaryColor,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-// دالة مساعدة لإنشاء بطاقات الملخص (بنفس نمط الدوال السابقة)
+  // دالة لإنشاء مربعات الملخص
   Widget _buildSummaryCard({
     required IconData icon,
     required String title,
@@ -2132,7 +1908,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// دالة مساعدة لإنشاء عنصر خيار أنيق
+  // دالة لإنشاء عناصر خيارات العرض
   Widget _buildOptionTile({
     required IconData icon,
     required String text,
@@ -2178,7 +1954,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-//  انشا الجدوال
+  //  انشا الجدوال
   Widget _buildTable(String view, Color borderColor) {
     final isCustomers = view == 'customers';
     final primaryColor =
@@ -2371,7 +2147,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
     );
   }
 
-// =============== الواجهه ==================
+  //   الواجهه
   @override
   Widget build(BuildContext context) {
     return Directionality(
@@ -2564,8 +2340,8 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                       onTap: () => _selectDate(context),
                       // اختيار التاريخ لعمليات العملاء
 
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                      child: Container(
+                        // duration: const Duration(milliseconds: 100),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -2599,7 +2375,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                             curve: Curves.easeInOut);
                       },
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 100),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         decoration: BoxDecoration(
                           color: _currentPage == 0
@@ -2645,7 +2421,7 @@ class AddTransactionPageState extends State<AddTransactionPage> {
                             curve: Curves.easeInOut);
                       },
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
+                        duration: const Duration(milliseconds: 100),
                         padding: const EdgeInsets.symmetric(horizontal: 6),
                         decoration: BoxDecoration(
                           color: _currentPage == 1
@@ -2817,362 +2593,6 @@ class AddTransactionPageState extends State<AddTransactionPage> {
       ),
     );
   }
-
-  Future<void> _editTransaction(Map<String, dynamic> transaction) async {
-    if (!transaction.containsKey('amount') ||
-        !transaction.containsKey('details') ||
-        !transaction.containsKey('type')) {
-      return;
-    }
-
-    final isCustomers = _selectedView == 'customers';
-    final primaryColor =
-        isCustomers ? Colors.blue.shade700 : Colors.orange.shade700;
-    final lightColor =
-        isCustomers ? Colors.blue.shade100 : Colors.orange.shade100;
-
-    final amountController =
-        TextEditingController(text: transaction['amount'].toString());
-    final detailsController =
-        TextEditingController(text: transaction['details']);
-    String selectedType = transaction['type'];
-    String typeLabel = isCustomers ? 'إضافة' : 'قرض';
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: Dialog(
-                backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.all(16),
-                child: SingleChildScrollView(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 12,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Header
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                primaryColor,
-                                primaryColor.withOpacity(0.8)
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.only(
-                              topLeft: Radius.circular(16),
-                              topRight: Radius.circular(16),
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.edit,
-                                  size: 32, color: Colors.white),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'تعديل العملية',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Form Fields
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Column(
-                            children: [
-                              /*      // Amount Field
-                            TextFormField(
-                              controller: amountController,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'المبلغ',
-                                labelStyle:
-                                    TextStyle(color: Colors.grey.shade600),
-                                floatingLabelStyle: TextStyle(
-                                  color: primaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                prefixIcon: Icon(Icons.attach_money,
-                                    color: primaryColor),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: primaryColor),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                      color: primaryColor, width: 1.5),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide:
-                                      BorderSide(color: primaryColor, width: 2),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 14, horizontal: 16),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          */
-                              _buildInputField(
-                                controller: amountController,
-                                label: 'المبلغ',
-                                icon: Icons.attach_money,
-                                keyboardType: TextInputType.number,
-                                textInputAction: TextInputAction.next,
-                                // onEditingComplete: () => FocusScope.of(context).unfocus(),
-                              ),
-                              const SizedBox(height: 16),
-                              _buildInputField(
-                                controller: detailsController,
-                                label: 'تفاصيل العملية',
-                                icon: Icons.description,
-                                onEditingComplete: () =>
-                                    FocusScope.of(context).nextFocus(),
-                                textInputAction: TextInputAction.done,
-                              ),
-                              /*  // Details Field
-                            TextFormField(
-                              controller: detailsController,
-                              decoration: InputDecoration(
-                                labelText: 'التفاصيل',
-                                labelStyle:
-                                    TextStyle(color: Colors.grey.shade600),
-                                floatingLabelStyle: TextStyle(
-                                  color: primaryColor,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                prefixIcon: Icon(Icons.description,
-                                    color: primaryColor),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(color: primaryColor),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide(
-                                      color: primaryColor, width: 1.5),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide:
-                                      BorderSide(color: primaryColor, width: 2),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    vertical: 14, horizontal: 16),
-                              ),
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                           */
-                              const SizedBox(height: 16),
-
-                              // Transaction Type
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildTransactionTypeButton(
-                                    label: typeLabel,
-                                    isSelected: selectedType == typeLabel,
-                                    color: Colors.red,
-                                    onTap: () => setState(
-                                        () => selectedType = typeLabel),
-                                  ),
-                                  _buildTransactionTypeButton(
-                                    label: 'تسديد',
-                                    isSelected: selectedType == 'تسديد',
-                                    color: Colors.green,
-                                    onTap: () =>
-                                        setState(() => selectedType = 'تسديد'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        // Action Buttons
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildActionButton(
-                                  label: 'إلغاء',
-                                  icon: Icons.close,
-                                  color: Colors.red.shade600,
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: _buildActionButton(
-                                  label: 'حفظ',
-                                  icon: Icons.save_as_outlined,
-                                  color: Colors.green.shade600,
-                                  onPressed: () async {
-                                    if (amountController.text.isEmpty ||
-                                        detailsController.text.isEmpty) {
-                                      _showErrorMessage(
-                                          'يرجى تعبئة جميع الحقول');
-                                      return;
-                                    }
-
-                                    try {
-                                      final databaseHelper = DatabaseHelper();
-                                      int rowsAffected = 0;
-
-                                      if (isCustomers) {
-                                        rowsAffected = await databaseHelper
-                                            .updateOperation(
-                                          transaction['operation_id'],
-                                          double.parse(amountController.text),
-                                          detailsController.text,
-                                          selectedType,
-                                        );
-                                      } else {
-                                        rowsAffected = await databaseHelper
-                                            .updateAgentOperation(
-                                          transaction['operation_id'],
-                                          double.parse(amountController.text),
-                                          detailsController.text,
-                                          selectedType,
-                                        );
-                                      }
-
-                                      if (rowsAffected > 0 && mounted) {
-                                        Navigator.of(context).pop();
-                                        await fetchTransactions();
-                                        _showSuccessMessage(
-                                            'تم تعديل العملية بنجاح');
-                                      } else {
-                                        _showErrorMessage(
-                                            'فشل في تعديل العملية');
-                                      }
-                                    } catch (error) {
-                                      _showErrorMessage(
-                                          'حدث خطأ أثناء تعديل العملية');
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-/* // دالة مساعدة لإنشاء أزرار نوع العملية
-Widget _buildTransactionTypeButton({
-  required String label,
-  required bool isSelected,
-  required Color color,
-  required VoidCallback onTap,
-}) {
-  return GestureDetector(
-    onTap: onTap,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      decoration: BoxDecoration(
-        color: isSelected ? color : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color, width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: isSelected ? Colors.white : color,
-        ),
-      ),
-    ),
-  );
 }
 
-// دالة مساعدة لإنشاء أزرار التحكم
-Widget _buildActionButton({
-  required String label,
-  required IconData icon,
-  required Color color,
-  required VoidCallback onPressed,
-}) {
-  return ElevatedButton(
-    onPressed: onPressed,
-    style: ElevatedButton.styleFrom(
-      backgroundColor: color,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      elevation: 2,
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 20, color: Colors.white),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.white,
-          ),
-        ),
-      ],
-    ),
-  );
-}
- */
-}
-
-// ===================================
+  //  النهاية  

@@ -393,7 +393,7 @@ class DatabaseHelper {
   Future<void> insertOperation(
       int clientId, double amount, String details, String type) async {
     final db = await database;
-    String creetDate = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+    String creetDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
     await db.insert('operations', {
       'client_id': clientId, // حفظ ID العميل
@@ -785,7 +785,8 @@ class DatabaseHelper {
   Future<void> insertAgentOperation(
       int agentId, double amount, String details, String type) async {
     final db = await database;
-    String currentDate = DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+    String currentDate =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
 
     await db.insert('agent_operations', {
       'agent_id': agentId, // حفظ ID الوكيل
@@ -932,7 +933,7 @@ class DatabaseHelper {
     // استعلام لاسترجاع العمليات المرتبطة باسم العميل المدخل
     return await db.rawQuery('''
     SELECT 
-      agent_operations.id AS agent_id, 
+      agent_operations.id AS operation_id, 
       agent_operations.amount, 
       agent_operations.details, 
       agent_operations.type, 
@@ -1098,11 +1099,8 @@ class DatabaseHelper {
 // ============================================
 // ============================================
 // ============================================
-// import 'package:path/path.dart';
-// import 'package:sqflite/sqflite.dart';
-// import 'package:intl/intl.dart';
 
-// class DatabaseHelper {
+/* // class DatabaseHelper {
 //   static final DatabaseHelper _instance = DatabaseHelper._internal();
 //   static Database? _database;
 
@@ -1141,6 +1139,7 @@ class DatabaseHelper {
   //     )
   //   ''');
   // }
+ */
 
   // دالة لإضافة عملية جديدة إلى جدول my_box
   Future<void> insertMyBoxTransaction(

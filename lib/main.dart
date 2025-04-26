@@ -105,6 +105,8 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  // var _transactions = <Map<String, dynamic>>[];
+  // double profitpegsho = 0;
 
   Widget _buildDefaultPersonalInfo() {
     return Column(
@@ -171,8 +173,32 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  // دالة لتحديث قائمة العمليات
+  // Future<void> _refreshTransactions() async {
+  //   final summary = await DatabaseHelper().getTotalSummary();
+  //   setState(() {
+  //     _transactions = summary as List<Map<String, dynamic>>;
+
+  //     // حساب مجموع الكسب
+  //     final totalIncome = _transactions
+  //         .where((transaction) => transaction['type'] == 'ادخار')
+  //         .fold(0.0, (sum, transaction) => sum + transaction['amount']);
+
+  //     // حساب مجموع الصرف
+  //     final totalExpense = _transactions
+  //         .where((transaction) => transaction['type'] == 'سحب')
+  //         .fold(0.0, (sum, transaction) => sum + transaction['amount']);
+  //     final profitpeg = totalIncome - totalExpense;
+  //     profitpegsho = profitpeg;
+  //   });
+  // }
+
   @override
   Widget build(BuildContext context) {
+    // final summary =
+
+    //  final outstanding = summary['totalOutstanding'].toDouble();
+
     return Scaffold(
       key: _scaffoldKey,
 
@@ -208,20 +234,18 @@ class _HomePageState extends State<HomePage> {
           Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              // color: Colors.white,
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: Colors.white.withOpacity(0.5),
                   blurRadius: 4,
-                  offset: const Offset(0, 2),
+                  offset: const Offset(3, 4),
                 ),
               ],
             ),
-            child: IconButton(
-              icon: const Icon(Icons.monitor_weight_rounded,
-                  color: Color(0xFF999999), size: 28),
-              onPressed: () {
+            child: GestureDetector(
+              onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -229,6 +253,24 @@ class _HomePageState extends State<HomePage> {
                   ),
                 );
               },
+
+              child: Image.asset(
+                'images/mybox.png', // استبدل بالمسار الصحيح للصورة
+                width: 40,
+                // height: 30,
+              ),
+              // IconButton(
+              //   icon: const Icon(Icons.monitor_weight_rounded,
+              //       color: Color(0xFF999999), size: 28),
+              //   onPressed: () {
+              //     Navigator.push(
+              //       context,
+              //       MaterialPageRoute(
+              //         builder: (context) => const MyBoxScreen(),
+              //       ),
+              //     );
+              //   },
+              // ),
             ),
           ),
           // ),
@@ -406,7 +448,20 @@ class _HomePageState extends State<HomePage> {
       //  ==============================
       body: Padding(
         padding: const EdgeInsets.all(14.0),
-        child: GridView.count(
+        child:
+
+            //  Column(
+            // children: [
+            // Container(
+            //   child: Row(
+            //     children: [
+            //       // Text(
+            //       //   DatabaseHelper().getNumberFormat(profitpegsho),
+            //       // )
+            //     ],
+            //   ),
+            // ),
+            GridView.count(
           crossAxisCount: 2,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
@@ -425,6 +480,8 @@ class _HomePageState extends State<HomePage> {
                 context, Icons.book_rounded, 'مذكرتي', Colors.redAccent),
           ],
         ),
+        // ],
+        // ),
       ),
     );
   }
