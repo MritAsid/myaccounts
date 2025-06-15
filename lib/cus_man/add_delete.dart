@@ -21,6 +21,7 @@ class AddDeletePage extends StatefulWidget {
 }
 
 class _AddDeletePageState extends State<AddDeletePage> {
+  final pagColor = Colors.blue.shade400.withGreen(120);
   final primaryColorCustomer = Colors.blue.shade600;
   final primaryColorAgen = Colors.teal.shade700;
   final lightColorCustomer = Colors.blue.shade100;
@@ -56,7 +57,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
   String _transactionType = ''; //  تخزين نوع العمليه
 
   //  اختيار ترتيب الاسماء
-  String _sortBy = 'الافتراضي';
+  String _sortBy = 'default';
 
   // المتغيرات لك وعليك من المستحق
 
@@ -81,7 +82,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
     _loadAgents();
     _scrollController.addListener(_handleScroll);
     _scrollAgntController.addListener(_handleScroll);
-
+    // _sortBy = 'الافتراضي';
     _pageController.addListener(() {
       setState(() {
         _selectedView = _pageController.page! < 0.5 ? 'customers' : 'agents';
@@ -698,22 +699,34 @@ class _AddDeletePageState extends State<AddDeletePage> {
 
   //  تنفيذ الترتيب
   void _applySorting() {
+    //
     setState(() {
       _customers = List.from(_originalCustomers);
       _agents = List.from(_originalAgents);
 
-      if (_sortBy == 'الاسم من أ-ي') {
-        // الترتيب حسب الاسم من الألف إلى الياء
-        _customers.sort((a, b) => a['name'].compareTo(b['name']));
-        _agents.sort((a, b) => a['name'].compareTo(b['name']));
-      } else if (_sortBy == 'الأحدث أولاً') {
-        // الترتيب حسب الأحدث أولاً (حسب ID)
-        _customers.sort((a, b) => b['id'].compareTo(a['id']));
-        _agents.sort((a, b) => b['id'].compareTo(a['id']));
-      } else if (_sortBy == 'المبلغ الأكبر أولاً') {
-        // الترتيب حسب المبلغ الأكبر أولاً
-        _customers.sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
-        _agents.sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
+      switch (_sortBy) {
+        case 'name_asc':
+          _customers.sort((a, b) => a['name'].compareTo(b['name']));
+          _agents.sort((a, b) => a['name'].compareTo(b['name']));
+          break;
+        case 'newest':
+          _customers.sort((a, b) => b['id'].compareTo(a['id']));
+          _agents.sort((a, b) => b['id'].compareTo(a['id']));
+          break;
+        case 'debt_desc':
+          _customers
+              .sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
+          _agents.sort((a, b) => b['outstanding'].compareTo(a['outstanding']));
+          break;
+        case 'additions_desc':
+          _customers.sort(
+              (a, b) => b['totalAdditions'].compareTo(a['totalAdditions']));
+          _agents.sort(
+              (a, b) => b['totalAdditions'].compareTo(a['totalAdditions']));
+          break;
+        case 'default':
+          // لا حاجة للفرز، البيانات تم نسخها كما هي
+          break;
       }
     });
   }
@@ -730,10 +743,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
             return Directionality(
               textDirection: TextDirection.rtl,
               child: Dialog(
-                  backgroundColor: Colors.transparent,
-                  insetPadding: const EdgeInsets.all(20),
-                  child: SingleChildScrollView(
-                      child: Container(
+                backgroundColor: Colors.transparent,
+                insetPadding: const EdgeInsets.all(20),
+                child: SingleChildScrollView(
+                  child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
@@ -741,117 +754,123 @@ class _AddDeletePageState extends State<AddDeletePage> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // العنوان
                         Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.only(top: 8, bottom: 4),
-                            decoration: const BoxDecoration(
-                              gradient: LinearGradient(colors: [
-                                Color(0xFF03A9F4),
-                                Color(0xFF01608B)
-                              ]),
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
-                              ),
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          decoration: BoxDecoration(
+                            color: pagColor,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(16),
                             ),
-                            child: Column(children: const [
-                              Icon(
-                                Icons.sort_by_alpha_rounded,
-                                color: Colors.white,
-                                size: 24.0,
-                              ),
+                          ),
+                          child: Column(
+                            children: const [
+                              Icon(Icons.sort, color: Colors.white, size: 28),
                               Text(
-                                'ترتيب حسب',
+                                'ترتيب العناصر',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                   color: Colors.white,
                                 ),
-                                textAlign: TextAlign.center,
                               ),
-                            ])),
-                        Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildSortOption(
-                                    context,
-                                    title: 'الاسم من أ-ي',
-                                    icon: Icons.sort_by_alpha,
-                                    isActive: tempSortBy == 'الاسم من أ-ي',
-                                    onTap: () {
-                                      setStateDialog(
-                                          () => tempSortBy = 'الاسم من أ-ي');
-                                    },
-                                  ),
-                                  _buildSortOption(
-                                    context,
-                                    title: 'الأحدث أولاً',
-                                    icon: Icons.access_time,
-                                    isActive: tempSortBy == 'الأحدث أولاً',
-                                    onTap: () {
-                                      setStateDialog(
-                                          () => tempSortBy = 'الأحدث أولاً');
-                                    },
-                                  ),
-                                  _buildSortOption(
-                                    context,
-                                    title: 'المبلغ الأكبر أولاً',
-                                    icon: Icons.monetization_on_outlined,
-                                    isActive:
-                                        tempSortBy == 'المبلغ الأكبر أولاً',
-                                    onTap: () {
-                                      setStateDialog(() =>
-                                          tempSortBy = 'المبلغ الأكبر أولاً');
-                                    },
-                                  ),
-                                  _buildSortOption(
-                                    context,
-                                    title: 'الافتراضي',
-                                    icon: Icons.restore,
-                                    isActive: tempSortBy == 'الافتراضي',
-                                    onTap: () {
-                                      setStateDialog(
-                                          () => tempSortBy = 'الافتراضي');
-                                    },
-                                  ),
-                                ])),
-                        const SizedBox(height: 10.0),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            const SizedBox(width: 10.0),
-                            Expanded(
-                              child: _buildActionButton(
-                                label: 'إغلاق',
-                                icon: Icons.close,
-                                color: Colors.red.shade600,
-                                onPressed: () => Navigator.of(context).pop(),
-                              ),
-                            ),
-                            const SizedBox(width: 20.0),
-                            Expanded(
-                              child: _buildActionButton(
-                                label: 'حفظ الترتيب',
-                                icon: Icons.save,
-                                color: greenTextColor,
-                                onPressed: () {
-                                  setState(() {
-                                    _sortBy = tempSortBy;
-                                    _applySorting();
-                                  });
-                                  Navigator.pop(context);
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 10.0),
-                          ],
+                            ],
+                          ),
                         ),
-                        const SizedBox(height: 10.0),
+
+                        // خيارات الترتيب
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8, horizontal: 6),
+                          child: Wrap(
+                            spacing: 8.0,
+                            runSpacing: 12.0,
+                            alignment: WrapAlignment.spaceEvenly,
+                            children: [
+                              _buildSortOption(
+                                context,
+                                title: 'الاسم',
+                                icon: Icons.sort_by_alpha,
+                                isActive: tempSortBy == 'name_asc',
+                                onTap: () => setStateDialog(
+                                    () => tempSortBy = 'name_asc'),
+                              ),
+                              _buildSortOption(
+                                context,
+                                title: 'الأحدث',
+                                icon: Icons.schedule,
+                                isActive: tempSortBy == 'newest',
+                                onTap: () =>
+                                    setStateDialog(() => tempSortBy = 'newest'),
+                              ),
+                              _buildSortOption(
+                                context,
+                                title: '↑المستحق',
+                                icon: Icons.trending_up,
+                                isActive: tempSortBy == 'debt_desc',
+                                onTap: () => setStateDialog(
+                                    () => tempSortBy = 'debt_desc'),
+                              ),
+                              _buildSortOption(
+                                context,
+                                title: '↑ديون / قروض',
+                                icon: Icons.stacked_line_chart,
+                                isActive: tempSortBy == 'additions_desc',
+                                onTap: () => setStateDialog(
+                                    () => tempSortBy = 'additions_desc'),
+                              ),
+                              _buildSortOption(
+                                context,
+                                title: 'الافتراضي',
+                                icon: Icons.restore,
+                                isActive: tempSortBy == 'default',
+                                onTap: () => setStateDialog(
+                                    () => tempSortBy = 'default'),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 12.0),
+
+                        // الأزرار
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'إغلاق',
+                                  icon: Icons.close,
+                                  color: Colors.red.shade600,
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(
+                                child: _buildActionButton(
+                                  label: 'حفظ',
+                                  icon: Icons.check,
+                                  color: Colors.green.shade600,
+                                  onPressed: () {
+                                    setState(() {
+                                      _sortBy = tempSortBy;
+                                      _applySorting();
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12.0),
                       ],
                     ),
-                  ))),
+                  ),
+                ),
+              ),
             );
           },
         );
@@ -1076,6 +1095,9 @@ class _AddDeletePageState extends State<AddDeletePage> {
               icon,
               size: 16,
               color: Colors.white,
+              weight: 800,
+              opticalSize: 60,
+              grade: 200,
             ),
           ),
           const SizedBox(width: 8),
@@ -1123,7 +1145,12 @@ class _AddDeletePageState extends State<AddDeletePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 24, color: Colors.white),
+          Icon(
+            icon,
+            size: 24,
+            color: Colors.white,
+            weight: 60,
+          ),
           Text(
             label,
             style: const TextStyle(
@@ -1149,41 +1176,49 @@ class _AddDeletePageState extends State<AddDeletePage> {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-        margin: const EdgeInsets.symmetric(vertical: 8),
+        width: 100, // ثبات العرض لأفضل توزيع في Wrap
+        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 3),
         decoration: BoxDecoration(
-          color: isActive ? Colors.cyan.shade700 : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
+          color: isActive ? pagColor : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isActive ? Colors.black12 : Colors.cyan.shade700,
+            color: isActive ? Colors.black26 : pagColor,
             width: 1,
           ),
+          boxShadow: isActive
+              ? [
+                  const BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        child: Row(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isActive ? Colors.white : Colors.cyan.shade700),
-            const SizedBox(width: 20),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  color: isActive ? Colors.white : Colors.cyan.shade700,
-                ),
+            Icon(
+              icon,
+              color: isActive ? Colors.white : pagColor,
+              size: 28,
+              weight: 800,
+              opticalSize: 60,
+              grade: 200,
+            ),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+                color: isActive ? Colors.white : pagColor,
               ),
             ),
-            if (isActive)
-              const Icon(
-                Icons.check,
-                color: Colors.white,
-                size: 30,
-              ),
-            const SizedBox(
-              width: 10,
-            )
           ],
         ),
       ),
+      // )
     );
   }
 
@@ -1441,7 +1476,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
   void _showConfirmDailySaveDialog(Function(bool) onDecision) {
     CustomDialog.show(
         context: context,
-        headerColor: Colors.teal.shade600,
+        headerColor: selectedView ? primaryColorCustomer : primaryColorAgen,
         icon: Icons.attach_money_sharp,
         title: 'هل تريد حفظ العملية في الحساب اليومي  ؟',
         contentChildren: [
@@ -1525,8 +1560,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
     if (!mounted) return;
 
     Navigator.pop(context);
+    selectedView ? _loadCustomers() : _loadAgents();
 
-    _loadCustomers();
     _showSuccessMessage('تم حفظ العملية بنجاح');
   }
 
@@ -1579,7 +1614,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
             resizeToAvoidBottomInset: false,
             appBar: CustomAppBar(
               title: ' إدارة الحسابات   ',
-              colorTitle: Colors.blue.shade400.withGreen(120),
+              colorTitle: pagColor,
               onBackPress: () => Navigator.pop(context),
               onIcon1Press: () {
                 Navigator.pushReplacement(
@@ -1637,7 +1672,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                         : const Color(0xABFFFFFF),
                     color2PressChildrn:
                         !selectedView ? Colors.white : Colors.grey,
-                    color3Press: Colors.blue.shade400.withGreen(120),
+                    color3Press: pagColor,
                     onBack3Press: () => _showSortDialog(context),
                     icon3Press: Icons.sort_by_alpha_rounded,
                     title: '   ترتيب   ',
@@ -1676,7 +1711,9 @@ class _AddDeletePageState extends State<AddDeletePage> {
               duration: const Duration(milliseconds: 100),
               child: _showBars
                   ? FloatingActionButton(
-                      backgroundColor: Colors.blue.shade400.withGreen(120),
+                      backgroundColor: selectedView
+                          ? primaryColorCustomer
+                          : primaryColorAgen,
                       onPressed: () => _showAddAccountDialog(),
                       elevation: 4,
                       child:
