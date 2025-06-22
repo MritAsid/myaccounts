@@ -1,5 +1,11 @@
 {
-    "usd_to_yer": 1350.0,
-    "sar_to_yer": 355.0,
-    "updated_at": "2025-06-22"
+    "updated_at": "2025-06-22",
+    "aden": {
+        "usd_to_yer": 2712,
+        "sar_to_yer": 731
+    },
+    "sanaa": {
+        "usd_to_yer": 535,
+        "sar_to_yer": 139.5
+    }
 }
