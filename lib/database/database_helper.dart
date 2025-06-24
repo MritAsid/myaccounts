@@ -1,13 +1,25 @@
+// ==============Asmael Asid ====================================
+// ============   database_helper.dart
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart';
 import 'package:intl/intl.dart'; // مكتبة للتعامل مع التاريخ
 import 'package:http/http.dart' as http;
+// import 'package:file_picker/file_picker.dart';
+// import 'package:permission_handler/permission_handler.dart';
 
 import 'package:googleapis/drive/v3.dart' as drive;
 // import 'package:googleapis/drive/v3.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+// import 'package:external_path/external_path.dart';
+
+// import 'dart:io';
+// import 'package:intl/intl.dart';
+// import 'package:path/path.dart';
+// import 'package:path_provider/path_provider.dart';
+// import 'package:file_saver/file_saver.dart';
+// import 'package:mime/mime.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
@@ -24,15 +36,36 @@ class DatabaseHelper {
 // ============================================
 //           ادارة قاعدة البيانات
 // ============================================
+
+//   Future<Database> _initDatabase() async {
+//     String path = join(await getDatabasesPath(), 'app_database.db');
+// // حذف قاعدة البيانات إذا كانت موجودة (للتطوير فقط)
+//     // await deleteDatabase(path);
+//     return await openDatabase(
+//       path,
+//       version: 8, // زيادة رقم الإصدار لأننا أضفنا جداول جديدة
+//       onCreate: _onCreate,
+//       // onUpgrade: (db, oldVersion, newVersion) => _onCreate(db, newVersion),
+//       onUpgrade: (db, oldVersion, newVersion) async {
+//       if (oldVersion < 9) {
+//         await db.execute('ALTER TABLE customers ADD COLUMN email TEXT');
+//       }
+//       },
+//     );
+//   }
+
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'app_database.db');
-// حذف قاعدة البيانات إذا كانت موجودة (للتطوير فقط)
-    // await deleteDatabase(path);
+
     return await openDatabase(
       path,
-      version: 8, // زيادة رقم الإصدار لأننا أضفنا جداول جديدة
+      version: 9, // زيادة الرقم عند التحديث
       onCreate: _onCreate,
-      // onUpgrade: (db, oldVersion, newVersion) => _onCreate(db, newVersion),
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 9) {
+          await db.execute('ALTER TABLE customers ADD COLUMN email TEXT');
+        }
+      },
     );
   }
 
@@ -151,14 +184,33 @@ class DatabaseHelper {
 /* ==================================
    ============== العملاء ============
    ==================================*/
+// doesClientExist(trimmedName);
+
   // إضافة عميل جديد
   Future<int> insertCustomer(String name, String phone) async {
     final db = await database;
 
-    // إزالة الفراغات من بداية ونهاية الاسم
     String trimmedName = name.trim();
-
     return await db.insert('customers', {'name': trimmedName, 'phone': phone});
+  }
+
+  // استرجاع جميع العملاء
+  Future<List<Map<String, dynamic>>> getAllCustomersAndMount() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+    SELECT 
+      c.id,
+      c.name,
+      c.phone,
+      IFNULL(SUM(CASE WHEN o.type = "إضافة" THEN o.amount ELSE 0 END), 0) AS totalAdditions,
+      IFNULL(SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END), 0) AS totalPayments,
+      IFNULL(SUM(CASE WHEN o.type = "إضافة" THEN o.amount ELSE 0 END) - SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END), 0) AS outstanding
+    FROM customers c
+    LEFT JOIN operations o ON c.id = o.client_id
+    GROUP BY c.id, c.name, c.phone
+  ''');
+
+    return result;
   }
 
   // استرجاع جميع العملاء
@@ -229,6 +281,21 @@ class DatabaseHelper {
     ''',
     );
 
+    final arrearsResult = await db.rawQuery('''
+  SELECT 
+    SUM(CASE WHEN outstanding > 0 THEN outstanding ELSE 0 END) AS AllArrears,
+    SUM(CASE WHEN outstanding < 0 THEN -outstanding ELSE 0 END) AS AllIntroductions
+  FROM (
+    SELECT 
+      c.id,
+      IFNULL(SUM(CASE WHEN o.type = "إضافة" THEN o.amount ELSE 0 END), 0) -
+      IFNULL(SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END), 0) AS outstanding
+    FROM customers c
+    LEFT JOIN operations o ON c.id = o.client_id
+    GROUP BY c.id
+  )
+''');
+
     // استخراج القيم من النتائج
     final totalAdditions =
         additionsResult.first['totalAdditions'] as double? ?? 0.0;
@@ -236,6 +303,10 @@ class DatabaseHelper {
         paymentsResult.first['totalPayments'] as double? ?? 0.0;
     final totalCustomers =
         customersCountResult.first['totalCustomers'] as int? ?? 0;
+
+    // final allArrears = arrearsResult.first['AllArrears'] as double? ?? 0.0;
+    final allArrears = arrearsResult.first['AllArrears'];
+    final allIntroductions = arrearsResult.first['AllIntroductions'];
 
     // حساب المبلغ المستحق الكلي
     final totalOutstanding = totalAdditions - totalPayments;
@@ -245,6 +316,8 @@ class DatabaseHelper {
       'totalPayments': totalPayments,
       'totalOutstanding': totalOutstanding,
       'totalCustomers': totalCustomers,
+      'AllArrears': allArrears,
+      'AllIntroductions': allIntroductions,
     };
   }
 
@@ -265,6 +338,28 @@ class DatabaseHelper {
   Future<List<Map<String, dynamic>>> getAllAgents() async {
     final db = await database;
     return await db.query('agents');
+  }
+
+  Future<List<Map<String, dynamic>>> getAllAgentsAndMount() async {
+    final db = await database;
+    final List<Map<String, dynamic>> result = await db.rawQuery('''
+    SELECT 
+      a.id,
+      a.name,
+      a.phone,
+      IFNULL(SUM(CASE WHEN o.type = "قرض" THEN o.amount ELSE 0 END), 0) AS totalAdditions,
+      IFNULL(SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END), 0) AS totalPayments,
+      IFNULL(
+        SUM(CASE WHEN o.type = "قرض" THEN o.amount ELSE 0 END) - 
+        SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END),
+        0
+      ) AS outstanding
+    FROM agents a
+    LEFT JOIN agent_operations o ON a.id = o.agent_id
+    GROUP BY a.id, a.name, a.phone
+  ''');
+
+    return result;
   }
 
   // حذف وكيل
@@ -289,15 +384,18 @@ class DatabaseHelper {
   // تعديل وكيل
   Future<int> updateAgent(int id, String name, String phone) async {
     final db = await database;
+    String trimmedName = name.trim();
+
     return await db.update(
       'agents',
-      {'name': name, 'phone': phone},
+      {'name': trimmedName, 'phone': phone},
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
 // ==============   ملخص كل عمليات الوكلاء    ================
+
   Future<Map<String, dynamic>> getTotalAgeensSummary() async {
     final db = await database;
 
@@ -327,6 +425,21 @@ class DatabaseHelper {
     ''',
     );
 
+    final arrearsResult = await db.rawQuery('''
+    SELECT 
+      SUM(CASE WHEN outstanding > 0 THEN outstanding ELSE 0 END) AS AllArrears,
+      SUM(CASE WHEN outstanding < 0 THEN -outstanding ELSE 0 END) AS AllIntroductions
+    FROM (
+      SELECT 
+        a.id,
+        IFNULL(SUM(CASE WHEN o.type = "قرض" THEN o.amount ELSE 0 END), 0) -
+        IFNULL(SUM(CASE WHEN o.type = "تسديد" THEN o.amount ELSE 0 END), 0) AS outstanding
+      FROM agents a
+      LEFT JOIN agent_operations o ON a.id = o.agent_id
+      GROUP BY a.id
+    )
+  ''');
+
     // استخراج القيم من النتائج
     final totalAdditions =
         additionsResult.first['totalAdditions'] as double? ?? 0.0;
@@ -334,6 +447,9 @@ class DatabaseHelper {
         paymentsResult.first['totalPayments'] as double? ?? 0.0;
     final totalCustomers =
         customersCountResult.first['totalCustomers'] as int? ?? 0;
+
+    final allArrears = arrearsResult.first['AllArrears'];
+    final allIntroductions = arrearsResult.first['AllIntroductions'];
 
     // حساب المبلغ المستحق الكلي
     final totalOutstanding = totalAdditions - totalPayments;
@@ -343,6 +459,8 @@ class DatabaseHelper {
       'totalPayments': totalPayments,
       'totalOutstanding': totalOutstanding,
       'totalCustomers': totalCustomers,
+      'AllArrears': allArrears,
+      'AllIntroductions': allIntroductions,
     };
   }
 
@@ -364,7 +482,18 @@ class DatabaseHelper {
     return result.isNotEmpty;
   }
 
-//  =============  بحث الاسماء المطابقة لما يكتب في الحقل ==============
+  //==========  التحقق من وجود مورد=========
+  Future<bool> doesAgntExist(String name) async {
+    final db = await database;
+    final result = await db.query(
+      'agents',
+      where: 'name = ?',
+      whereArgs: [name],
+    );
+    return result.isNotEmpty;
+  }
+
+  //  =============  بحث الاسماء المطابقة لما يكتب في الحقل ==============
   Future<List<String>> getClientNames(String query) async {
     final db = await database;
 
@@ -556,7 +685,6 @@ class DatabaseHelper {
     };
   }
 
-//===========  ملخص العمليات للعملاء بناءً على نطاق زمني =========
 /*   Future<Map<String, double>> getSummaryByDateRange({
     DateTime? startDate,
     DateTime? endDate,
@@ -613,6 +741,8 @@ class DatabaseHelper {
   }
  */
 
+//===========  ملخص العمليات للعملاء بناءً على نطاق زمني =========
+
   Future<Map<String, double>> getSummaryByDateRange(
       DateTime startDate, DateTime endDate) async {
     final db = await database;
@@ -633,43 +763,6 @@ class DatabaseHelper {
     SELECT SUM(amount) AS total_additions
     FROM operations
     WHERE DATE(date) BETWEEN ? AND ? AND type = 'إضافة'
-  ''', [formattedStartDate, formattedEndDate]);
-
-    // تحويل القيم إلى double مع التعامل مع القيم الفارغة
-    final double totalPayments =
-        (totalPaymentsResult.first['total_payments'] as num?)?.toDouble() ??
-            0.0;
-    final double totalAdditions =
-        (totalAdditionsResult.first['total_additions'] as num?)?.toDouble() ??
-            0.0;
-
-    return {
-      'total_payments': totalPayments,
-      'total_additions': totalAdditions,
-      'balance': totalPayments - totalAdditions,
-    };
-  }
-
-  Future<Map<String, double>> getSummaryAgentByDateRange(
-      DateTime startDate, DateTime endDate) async {
-    final db = await database;
-    final formattedStartDate =
-        "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
-    final formattedEndDate =
-        "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
-
-    // جلب إجمالي التسديدات
-    final totalPaymentsResult = await db.rawQuery('''
-    SELECT SUM(amount) AS total_payments
-    FROM agent_operations
-    WHERE DATE(date) BETWEEN ? AND ? AND type = 'تسديد'
-  ''', [formattedStartDate, formattedEndDate]);
-
-    // جلب إجمالي الإضافات
-    final totalAdditionsResult = await db.rawQuery('''
-    SELECT SUM(amount) AS total_additions
-    FROM agent_operations
-    WHERE DATE(date) BETWEEN ? AND ? AND type = 'قرض'
   ''', [formattedStartDate, formattedEndDate]);
 
     // تحويل القيم إلى double مع التعامل مع القيم الفارغة
@@ -751,12 +844,10 @@ class DatabaseHelper {
     };
   }
 
-//===========  ملخص كل العمليات  للعملاء =========
-
 /* ==================================
    ============== الوكلاء ============
    ==================================*/
-// ============ البحث عن أسماء الوكلاء المتطابقة ==============
+  // ============ البحث عن أسماء الوكلاء المتطابقة ==============
   Future<List<String>> getAgentNames(String query) async {
     final db = await database;
 
@@ -900,6 +991,43 @@ class DatabaseHelper {
     };
   }
 
+  Future<Map<String, double>> getSummaryAgentByDateRange(
+      DateTime startDate, DateTime endDate) async {
+    final db = await database;
+    final formattedStartDate =
+        "${startDate.year}-${startDate.month.toString().padLeft(2, '0')}-${startDate.day.toString().padLeft(2, '0')}";
+    final formattedEndDate =
+        "${endDate.year}-${endDate.month.toString().padLeft(2, '0')}-${endDate.day.toString().padLeft(2, '0')}";
+
+    // جلب إجمالي التسديدات
+    final totalPaymentsResult = await db.rawQuery('''
+    SELECT SUM(amount) AS total_payments
+    FROM agent_operations
+    WHERE DATE(date) BETWEEN ? AND ? AND type = 'تسديد'
+  ''', [formattedStartDate, formattedEndDate]);
+
+    // جلب إجمالي الإضافات
+    final totalAdditionsResult = await db.rawQuery('''
+    SELECT SUM(amount) AS total_additions
+    FROM agent_operations
+    WHERE DATE(date) BETWEEN ? AND ? AND type = 'قرض'
+  ''', [formattedStartDate, formattedEndDate]);
+
+    // تحويل القيم إلى double مع التعامل مع القيم الفارغة
+    final double totalPayments =
+        (totalPaymentsResult.first['total_payments'] as num?)?.toDouble() ??
+            0.0;
+    final double totalAdditions =
+        (totalAdditionsResult.first['total_additions'] as num?)?.toDouble() ??
+            0.0;
+
+    return {
+      'total_payments': totalPayments,
+      'total_additions': totalAdditions,
+      'balance': totalPayments - totalAdditions,
+    };
+  }
+
 /* ===============================================
    ============== بحث عن كشف عميل ===============
    ===============================================*/
@@ -1027,20 +1155,72 @@ class DatabaseHelper {
   }
 
 //========= دالة لتوليد التاريخ  لطباعة الكشف =======
-  String getFormattedDate() {
-    final now = DateTime.now();
+  String getFormattedDate(DateTime tehDate) {
+    // final now = DateTime.now();
     final formatter = DateFormat('yyyy/MM/dd'); // تنسيق التاريخ
-    return formatter.format(now);
+    return formatter.format(tehDate);
   }
 
-  String getNumberFormat(double num) {
-    // final now = DateTime.now();
-    final formatter = NumberFormat('#,###');
-    return formatter.format(num.toInt());
-  }
+  // String getNumberFormat(double num) {
+  //    final formatter = NumberFormat('#,###');
+  //   return formatter.format(num.toInt());
+  // }
+  // String getNumberFormat(double num, {bool withDecimal = false}) {
+  //   final formatter = withDecimal
+  //       ? NumberFormat('#,##0.00') // مع كسور عشرية
+  //       : NumberFormat('#,###'); // بدون كسور
+  //   return formatter.format(withDecimal ? num : num.round());
+  // }
+  // String getNumberFormat(double num) {
+  //   final hasDecimal = num % 1 != 0;
+
+  //   final formatter = hasDecimal
+  //       ? NumberFormat('#,##0.##') // مع كسور (يعرض رقم أو رقمين حسب الحاجة)
+  //       : NumberFormat('#,###'); // بدون كسور
+
+  //   return formatter.format(num);
+  // }
+  // String getNumberFormat(double num) {
+  //   final hasDecimal = num % 1 != 0;
+
+  //   final formatter = hasDecimal
+  //       ? NumberFormat('#,##0.00') // ← يعرض دائمًا رقمين عشريين
+  //       : NumberFormat('#,###'); // ← بدون كسور
+
+  //   return formatter.format(num);
+  // }
+
+  // String getNumberFormat(double num) {
+  //   final isWholeNumber = num == num.toInt();
+
+  //   // إذا الرقم لا يحتوي على كسور، نعرضه كرقم صحيح
+  //   if (isWholeNumber) {
+  //     return NumberFormat('#,###').format(num);
+  //   }
+
+  //   // إذا فيه كسر، نعرضه كما هو (بدون فرض رقمين عشرين)
+  //   return num.toStringAsFixed(
+  //     num.toString().split('.').last.length, // عدد الأرقام العشرية الفعلي
+  //   ).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => ',');
+  // }
+
 //  final formatter = NumberFormat(double) {
 
 //   };
+
+// import 'package:intl/intl.dart';
+
+  String getNumberFormat(num input) {
+    final double numValue = input.toDouble();
+
+    final formatter = (numValue % 1 != 0)
+        ? NumberFormat(
+            '#,##0.00') // أظهر دائماً رقمين عشريين لو في كسر أو لو الرقم صفر
+        : NumberFormat('#,###'); // بدون كسور لو الرقم صحيح وغير صفر
+
+    return formatter.format(numValue);
+  }
+
 /* ===============================================
    ============== الحساب الشخصي  ===============
    ===============================================*/
@@ -1050,7 +1230,6 @@ class DatabaseHelper {
     final db = await database;
     final date = DateFormat('yyyy-MM-dd HH:mm:ss')
         .format(DateTime.now()); // تنسيق التاريخ
-
     await db.insert(
       'daily_account',
       {
@@ -1061,6 +1240,87 @@ class DatabaseHelper {
       },
     );
   }
+
+  Future<void> hasExportedYesterday(
+      double amount, String details, String type, DateTime yesterday) async {
+    final db = await database;
+
+    final date =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(yesterday); // تنسيق التاريخ
+    await db.insert(
+      'daily_account',
+      {
+        'amount': amount,
+        'details': details,
+        'type': type,
+        'date': date,
+      },
+    );
+    // final result = await db.query(
+    //   'daily_account',
+    //   where: "date LIKE ?",
+    //   whereArgs: ['$yesterday%'],
+    //   orderBy: 'date DESC',
+    //   limit: 1,
+    // );
+
+    // if (result.isEmpty) return false;
+
+    // final lastTransaction = result.first;
+    // return lastTransaction['details'] == 'تصدير لليوم التالي';
+  }
+
+/* 
+Future<void> insertDailyTransaction(
+    double amount, String details, String type) async {
+  final db = await database;
+  final now = DateTime.now();
+  final today = DateFormat('yyyy-MM-dd').format(now);
+  final dateTimeFormatted = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
+
+  // تحقق هل هذا أول إدخال في هذا اليوم
+  final existing = await db.query(
+    'daily_account',
+    where: "date LIKE ?",
+    whereArgs: ['$today%'],
+  );
+
+  if (existing.isEmpty) {
+    final yesterday =
+        DateFormat('yyyy-MM-dd').format(now.subtract(Duration(days: 1)));
+
+    // تحقق من وجود عملية "تصدير لليوم التالي"
+    final shouldImport = await hasExportedYesterday(yesterday);
+
+    if (shouldImport) {
+      final remaining = await getRemainingFromDate(yesterday);
+
+      if (remaining != 0) {
+        await db.insert(
+          'daily_account',
+          {
+            'amount': remaining,
+            'details': 'ترحيل من $yesterday',
+            'type': 'كسب',
+            'date': dateTimeFormatted,
+          },
+        );
+      }
+    }
+  }
+
+  // ثم أضف العملية الفعلية
+  await db.insert(
+    'daily_account',
+    {
+      'amount': amount,
+      'details': details,
+      'type': type,
+      'date': dateTimeFormatted,
+    },
+  );
+}
+ */
 
 //=============== استرجاع العمليات ===================
   Future<List<Map<String, dynamic>>> getDailyTransactions() async {
@@ -1195,7 +1455,7 @@ class DatabaseHelper {
 /* ===============================================
    ============== النسخ الاحتياطي  ===============
    ===============================================*/
-//  انشاء نسخه احتياطيه محليه
+  ///  انشاء نسخه احتياطيه محليه
   Future<File> exportDatabase() async {
     final dbPath = await getDatabasesPath();
     final dbFile = File(join(dbPath, 'app_database.db'));
@@ -1220,6 +1480,178 @@ class DatabaseHelper {
     return backupFile;
   }
 
+/*   Future<File> exportDatabase() async {
+    final dbPath = await getDatabasesPath();
+    final dbFile = File(join(dbPath, 'app_database.db'));
+
+    // طلب صلاحية التخزين
+    if (!await Permission.storage.request().isGranted) {
+      throw Exception('لم يتم منح صلاحية الوصول إلى التخزين.');
+    }
+
+    Directory directory = Directory('/storage/emulated/0/Documents');
+
+    if (!await directory.exists()) {
+      // فتح نافذة لاختيار مجلد
+      String? selectedDir = await FilePicker.platform.getDirectoryPath(
+        dialogTitle: 'اختر مجلدًا لحفظ النسخة الاحتياطية',
+      );
+
+      if (selectedDir == null) {
+        throw Exception('لم يتم اختيار أي مجلد');
+      }
+
+      directory = Directory(selectedDir);
+    }
+
+    // إنشاء مجلد "MritProTow" داخل المجلد المختار
+    final mritProDir = Directory('${directory.path}/MritProTow');
+    if (!await mritProDir.exists()) {
+      await mritProDir.create(recursive: true);
+    }
+
+    // نسخ قاعدة البيانات إلى مجلد MritProTow
+    final backupFile = File(
+        '${mritProDir.path}/app_database_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.db');
+    await dbFile.copy(backupFile.path);
+
+    return backupFile;
+  }
+ */
+/* 
+Future<void> exportDatabaseNwo() async {
+  final dbPath = await getDatabasesPath();
+  final dbFile = File(join(dbPath, 'app_database.db'));
+
+  if (!await dbFile.exists()) {
+    throw Exception('قاعدة البيانات غير موجودة.');
+  }
+
+  try {
+    // إنشاء نسخة من قاعدة البيانات في الذاكرة المؤقتة
+    final tempDir = await getTemporaryDirectory();
+    final backupFile = File(
+      '${tempDir.path}/MyAccounts_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.db',
+    );
+    await dbFile.copy(backupFile.path);
+
+    // فتح نافذة حفظ الملف للمستخدم
+    final fileBytes = await backupFile.readAsBytes();
+    final fileName = basename(backupFile.path);
+    final mimeType = lookupMimeType(backupFile.path) ?? 'application/octet-stream';
+
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: fileBytes,
+      ext: 'db',
+      mimeType: mimeType,
+    );
+  } catch (e) {
+    throw Exception('فشل حفظ النسخة الاحتياطية: $e');
+  }
+}
+ */
+/* 
+Future<void> exportDatabaseNew() async {
+  final dbPath = await getDatabasesPath();
+  final dbFile = File(join(dbPath, 'app_database.db'));
+
+  if (!await dbFile.exists()) {
+    throw Exception('قاعدة البيانات غير موجودة.');
+  }
+
+  try {
+    // نسخ قاعدة البيانات إلى مجلد مؤقت
+    final tempDir = await getTemporaryDirectory();
+    final backupFile = File(
+      '${tempDir.path}/MyAccounts_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.db',
+    );
+    await dbFile.copy(backupFile.path);
+
+    // قراءة الملف كـ Bytes
+    final fileBytes = await backupFile.readAsBytes();
+    final fileName = basename(backupFile.path);
+
+    // حفظ الملف باستخدام FileSaver
+    await FileSaver.instance.saveFile(
+      name: fileName,
+      bytes: fileBytes,
+      ext: 'db',
+      mimeType: MimeType.other, // تم التعديل هنا
+    );
+  } catch (e) {
+    throw Exception('فشل حفظ النسخة الاحتياطية: $e');
+  }
+}
+ */
+/* 
+  Future<File> exportDatabaseNew() async {
+    final dbPath = await getDatabasesPath();
+    final dbFile = File(join(dbPath, 'app_database.db'));
+
+    // فتح نافذة لاختيار مجلد الوجهة باستخدام file_picker
+    String? selectedDirectory = await FilePicker.platform.getDirectoryPath();
+    if (selectedDirectory == null) {
+      throw Exception('لم يتم اختيار مجلد');
+    }
+
+    // إنشاء اسم للنسخة الاحتياطية
+    final fileName =
+        'app_database_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.db';
+
+    // إنشاء مسار النسخ
+    final backupPath = join(selectedDirectory, fileName);
+    final backupFile = File(backupPath);
+
+    // نسخ قاعدة البيانات إلى المسار المحدد
+    await dbFile.copy(backupFile.path);
+
+    return backupFile;
+  }
+ */
+
+  Future<File> exportDatabaseNew() async {
+    final dbPath = await getDatabasesPath();
+    final dbFile = File('$dbPath/app_database.db');
+
+    if (!(await dbFile.exists())) {
+      throw Exception("القاعدة غير موجودة");
+    }
+
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'app_database_$timestamp.db';
+
+    // احصل على مجلد التنزيلات مباشرة
+    final downloadsDir = await getDownloadsDirectory();
+    if (downloadsDir == null) throw Exception("تعذر الوصول إلى مجلد التنزيلات");
+
+    final newPath = '${downloadsDir.path}/$fileName';
+    final newFile = await dbFile.copy(newPath);
+    return newFile;
+  }
+
+/* 
+  Future<File> exportDatabaseNew() async {
+    final dbPath = await getDatabasesPath();
+    final dbFile = File('$dbPath/app_database.db');
+
+    if (!(await dbFile.exists())) {
+      throw Exception("القاعدة غير موجودة");
+    }
+
+    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+    final fileName = 'app_database_$timestamp.db';
+
+    final downloadsPath = await ExternalPath.getExternalStoragePublicDirectory(
+      'Download',
+    );
+
+    final newPath = '$downloadsPath/$fileName';
+
+    final newFile = await dbFile.copy(newPath);
+    return newFile;
+  }
+ */
   // استيراد قاعدة البيانات من ملف
   Future<void> importDatabase(File backupFile) async {
     final dbPath = await getDatabasesPath();

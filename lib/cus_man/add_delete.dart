@@ -21,8 +21,8 @@ class AddDeletePage extends StatefulWidget {
 }
 
 class _AddDeletePageState extends State<AddDeletePage> {
-  final pagColor = Colors.blue.shade400.withGreen(120);
-  final primaryColorCustomer = Colors.blue.shade600;
+  final pagColor = const Color(0xFF3F51B5);
+  final primaryColorCustomer = Colors.blue.shade700;
   final primaryColorAgen = Colors.teal.shade700;
   final lightColorCustomer = Colors.blue.shade100;
   final lightColoAgenr = Colors.teal.shade100;
@@ -60,16 +60,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
   String _sortBy = 'default';
 
   // المتغيرات لك وعليك من المستحق
-
-  //  على العملاء
-  double onCustomers = 0;
-  //   للعملاء
-  double forrCustomers = 0;
-  //     عليك للموردين
-  double forrDealers = 0;
-  // علي الموردين
-  double onDealers = 0;
-
+  Map<String, dynamic> dataCustomers = {};
+  Map<String, dynamic> dataAgneents = {};
   // التمرير
   double _lastDirectionOffset = 0;
   ScrollDirection? _lastDirection;
@@ -78,17 +70,17 @@ class _AddDeletePageState extends State<AddDeletePage> {
   @override
   void initState() {
     super.initState();
-    _loadCustomers();
-    _loadAgents();
     _scrollController.addListener(_handleScroll);
     _scrollAgntController.addListener(_handleScroll);
-    // _sortBy = 'الافتراضي';
     _pageController.addListener(() {
       setState(() {
         _selectedView = _pageController.page! < 0.5 ? 'customers' : 'agents';
         selectedView = _selectedView == 'customers';
       });
     });
+    _loadCustomers(); // انتظر تحميل العملاء
+
+    _initData();
   }
 
   //   تدمير الواجهة
@@ -150,65 +142,40 @@ class _AddDeletePageState extends State<AddDeletePage> {
     });
   }
 
+  Future<void> _initData() async {
+    await _loadAgents(); // انتظر تحميل العملاء
+    await preparingCustomersData(); // ثم ابدأ في التحليل
+  }
+
   // تحميل العملاء
-  void _loadCustomers() async {
+  Future<void> _loadCustomers({bool opr = false}) async {
     final data = await _dbHelper.getAllCustomersAndMount();
-    //  على العملاء
-    onCustomers = 0.0;
-    // للعملاء
-    forrCustomers = 0.0;
-
-    for (var customer in data) {
-      final outstanding = customer['outstanding'];
-
-      if (outstanding > 0) {
-        //  اذ كان المستحق على العميل  اكبر من 0 اضف قيمته الى متغير  //  على العملاء
-        onCustomers += outstanding;
-      } else if (outstanding < 0) {
-        //  اذ كان المستحق على العميل  اصغر  من 0 اضف قيمته الى متغير  // للعملاء
-        forrCustomers += outstanding;
-      }
-    }
-    //  تحويل قيمة للعملاء الى موجب
-    forrCustomers = -forrCustomers;
     setState(() {
       _customers = data;
       _originalCustomers = List.from(data);
-
-      _applySorting();
+      if (opr) _applySorting();
     });
   }
 
   // تحميل الموردين
-  void _loadAgents() async {
+  Future<void> _loadAgents({bool opr = false}) async {
     final data = await _dbHelper.getAllAgentsAndMount();
-    //  عليك للموردين
-    forrDealers = 0.0;
-    // على الموردين
-    onDealers = 0.0;
 
     setState(() {
       _agents = data;
       _originalAgents = List.from(data);
-
-      _applySorting();
+      if (opr) _applySorting();
     });
+  }
 
-    // حساب الإجماليات
-    for (var agent in data) {
-      final outstanding = agent['outstanding'];
+  Future<void> preparingCustomersData() async {
+    final summaryCustomers = await _dbHelper.getTotalSummary();
+    final summaryAgeents = await _dbHelper.getTotalAgeensSummary();
 
-      if (outstanding > 0) {
-        //  اذ كان المستحق للمورد  اكبر من 0 اضف قيمته الى متغير  //   عليك للموردين
-        forrDealers += outstanding;
-      } else if (outstanding < 0) {
-        //  اذ كان المستحق للمورد  اصغر من 0 اضف قيمته الى متغير  //   على الموردين
-        onDealers += outstanding;
-      }
-    }
-    //  تحويل قيمة على الموردين الى موجب
-
-    onDealers = -onDealers;
+    setState(() {
+      dataCustomers = summaryCustomers;
+      dataAgneents = summaryAgeents;
+    });
   }
 
 //  تنظيف الحقول
@@ -276,7 +243,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
   //  حفظ الحساب
-  void _saveAccount() async {
+  Future<void> _saveAccount() async {
     final name = _nameController.text.trim();
     final phone = _phoneController.text.trim();
 
@@ -307,14 +274,14 @@ class _AddDeletePageState extends State<AddDeletePage> {
     if (!mounted) return;
     Navigator.pop(context);
 
-    _sortBy = 'الأحدث أولاً';
+    _sortBy = 'newest';
 
     // حمّل البيانات وأعرض الرسالة
     if (isCustomer) {
-      _loadCustomers();
+      _loadCustomers(opr: true);
       _showSuccessMessage('تم حفظ العميل بنجاح');
     } else {
-      _loadAgents();
+      _loadAgents(opr: true);
       _showSuccessMessage('تم حفظ المورد بنجاح');
     }
   }
@@ -334,17 +301,19 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
   // حذف حساب عميل
-  void _deleteCustomer(int id) async {
+  Future<void> _deleteCustomer(int id) async {
     await _dbHelper.deleteCustomer(id);
     _showSuccessMessage('تم حذف العميل بنجاح');
-    _loadCustomers();
+    _loadCustomers(opr: true);
+    preparingCustomersData();
   }
 
   // حذف حساب المور
-  void _deleteAgent(int id) async {
+  Future<void> _deleteAgent(int id) async {
     await _dbHelper.deleteAgent(id);
     _showSuccessMessage('تم حذف الوكيل بنجاح');
-    _loadAgents();
+    _loadAgents(opr: true);
+    preparingCustomersData();
   }
 
   // تعديل حساب عميل او مورد
@@ -405,7 +374,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                       _phoneController.text,
                     );
                     _showSuccessMessage('تم تعديل بيانات العميل بنجاح');
-                    _loadCustomers();
+                    _loadCustomers(opr: true);
                   } else {
                     Navigator.pop(context);
                     _dbHelper.updateAgent(
@@ -414,7 +383,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                       _phoneController.text,
                     );
                     _showSuccessMessage('تم تعديل بيانات المورد بنجاح');
-                    _loadAgents();
+                    _loadAgents(opr: true);
                   }
                   // نظّف الحقول
                   claerInpt();
@@ -428,18 +397,15 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
   //  نافذة  ملخص العملاء او الموردين
-  void _showTotalSummaryDialog() async {
-    final summary = selectedView
-        ? await _dbHelper.getTotalSummary()
-        : await _dbHelper.getTotalAgeensSummary();
+  void _showTotalSummaryDialog() {
+    final summary = selectedView ? dataCustomers : dataAgneents;
     final colorFunction =
         selectedView ? primaryColorCustomer : primaryColorAgen;
     //  عليك للموردين      على العملاء                       المستحق
-    final outstanding = selectedView ? onCustomers : forrDealers;
-    // للعملاء
-
+    final outstanding = summary['AllArrears'];
     //     على للموردين    عليك العملاء                          المقدمه
-    final outstandingRvers = selectedView ? forrCustomers : onDealers;
+    final outstandingRvers = summary['AllIntroductions'];
+
     if (!mounted) return;
     CustomDialog.show(
       context: context,
@@ -459,10 +425,8 @@ class _AddDeletePageState extends State<AddDeletePage> {
         _buildSummaryCard(
           icon: Icons.price_check_rounded,
           title: selectedView ? 'المبالغ المستلمة' : 'المبالغ المسلمة',
-          value: outstandingRvers > 0
-              ? _dbHelper
-                  .getNumberFormat(summary['totalPayments'] - outstandingRvers)
-              : _dbHelper.getNumberFormat(summary['totalPayments']),
+          value: _dbHelper
+              .getNumberFormat(summary['totalPayments'] - outstandingRvers),
           color: greenTextColor.withOpacity(0.3),
           valueColor: greenTextColor,
         ),
@@ -484,46 +448,53 @@ class _AddDeletePageState extends State<AddDeletePage> {
               : Colors.grey.shade400,
           valueColor: outstanding > 0 ? redTextColor : Colors.black54,
         ),
-        if (outstandingRvers > 0) const SizedBox(height: 12),
         if (outstandingRvers > 0)
-          Text(
-            '*  ملاحظة ',
-            style: TextStyle(
-                color: redTextColor, fontSize: 16, fontWeight: FontWeight.w800),
+          Column(
+            children: [
+              const SizedBox(height: 6),
+              Text(
+                '*  ملاحظة ',
+                style: TextStyle(
+                    color: redTextColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 6),
+              _buildSummaryRow(
+                  selectedView
+                      ? 'مبالغ  دفعها العملاء مقدمأ'
+                      : 'مبالغ  دفعتها للموردين مقدمأ',
+                  _dbHelper.getNumberFormat(outstandingRvers),
+                  icon: selectedView ? Icons.remove : Icons.add,
+                  color: redTextColor,
+                  valueColor: redTextColor.withOpacity(0.2)),
+              const SizedBox(height: 8),
+              _buildSummaryRow(
+                  selectedView
+                      ? 'اجمالي المبالغ المستلمة'
+                      : 'اجمالي المبالغ المسلمة',
+                  _dbHelper.getNumberFormat(summary['totalPayments']),
+                  icon: selectedView ? Icons.add : Icons.remove,
+                  color: greenTextColor,
+                  valueColor: greenTextColor.withOpacity(0.3)),
+              const SizedBox(height: 8),
+              _buildSummaryRow(selectedView ? 'رصيد العملاء' : 'رصيد الموردين',
+                  _dbHelper.getNumberFormat(summary['totalOutstanding']),
+                  icon: Icons.account_balance_wallet,
+                  color: colorFunction,
+                  valueColor: colorFunction.withOpacity(0.3)),
+            ],
           ),
-        const SizedBox(height: 8),
-        if (outstandingRvers > 0)
-          _buildSummaryRow(
-              selectedView
-                  ? 'مبالغ  دفعها العملاء مقدمأ'
-                  : 'مبالغ  دفعتها للموردين مقدمأ',
-              _dbHelper.getNumberFormat(outstandingRvers),
-              icon: selectedView ? Icons.remove : Icons.add,
-              color: redTextColor,
-              valueColor: redTextColor.withOpacity(0.2)),
-        if (outstandingRvers > 0) const SizedBox(height: 8),
-        if (outstandingRvers > 0)
-          _buildSummaryRow(
-              selectedView
-                  ? 'اجمالي المبالغ المستلمة'
-                  : 'اجمالي المبالغ المسلمة',
-              summary['totalPayments'] > 0
-                  ? _dbHelper.getNumberFormat(summary['totalPayments'])
-                  : summary['totalPayments'].toString(),
-              icon: selectedView ? Icons.add : Icons.remove,
-              color: greenTextColor,
-              valueColor: greenTextColor.withOpacity(0.3)),
-        Padding(
-          padding: const EdgeInsets.all(8),
-          child: _buildActionButton(
-            label: 'إغلاق',
-            icon: Icons.close,
-            color: colorFunction,
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
+        const SizedBox(height: 6),
+        _buildActionButton(
+          label: 'إغلاق',
+          icon: Icons.close,
+          color: colorFunction,
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
         ),
+        const SizedBox(height: 6),
       ],
     );
   }
@@ -570,9 +541,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
           const SizedBox(height: 18),
           _buildSummaryRow(
             selectedView ? 'الديون المستحقة' : 'القروض المستحقة',
-            totalAdditions > 0
-                ? _dbHelper.getNumberFormat(totalAdditions)
-                : totalAdditions.toString(),
+            _dbHelper.getNumberFormat(totalAdditions),
             icon: Icons.price_change_outlined,
             color: redTextColor,
             valueColor: redTextColor.withOpacity(0.2),
@@ -580,9 +549,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
           const SizedBox(height: 8),
           _buildSummaryRow(
             selectedView ? 'المبالغ المستلمة' : 'المبالغ المسلمة',
-            totalPayments > 0
-                ? _dbHelper.getNumberFormat(totalPayments)
-                : totalPayments.toString(),
+            _dbHelper.getNumberFormat(totalPayments),
             icon: Icons.price_check_rounded,
             color: greenTextColor,
             valueColor: greenTextColor.withOpacity(0.3),
@@ -594,9 +561,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                 : selectedView
                     ? 'المستحق $isDebtCust'
                     : 'المستحق $isDebtAgnt',
-            finlOgstin != 0
-                ? _dbHelper.getNumberFormat(finlOgstin)
-                : finlOgstin.toInt().toString(),
+            _dbHelper.getNumberFormat(finlOgstin),
             icon: outstanding == 0
                 ? Icons.money_off
                 : isDebt
@@ -670,8 +635,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
               label: '',
               icon: Icons.receipt_long,
               color: const Color(0xFF07BEAC),
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                Navigator.of(context).pop();
+
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) => SearchClientPage(
@@ -680,6 +647,12 @@ class _AddDeletePageState extends State<AddDeletePage> {
                     ),
                   ),
                 );
+                setState(() {
+                  selectedView
+                      ? _loadCustomers(opr: true)
+                      : _loadAgents(opr: true);
+                  preparingCustomersData();
+                });
               },
             ),
           ]),
@@ -698,9 +671,12 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
   //  تنفيذ الترتيب
+  // void _applySorting(String newSortBy) {
   void _applySorting() {
-    //
+    // إذا لم يتغير الترتيب، لا تفعل شيئًا
     setState(() {
+      // _sortBy = newSortBy;
+
       _customers = List.from(_originalCustomers);
       _agents = List.from(_originalAgents);
 
@@ -731,151 +707,192 @@ class _AddDeletePageState extends State<AddDeletePage> {
     });
   }
 
-  //  اختيار الترتيب
+  //  الدالة الرئيسية لعرض نافذة الترتيب المبسّطة
   void _showSortDialog(BuildContext context) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         String tempSortBy = _sortBy;
 
         return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setStateDialog) {
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: Dialog(
-                backgroundColor: Colors.transparent,
-                insetPadding: const EdgeInsets.all(20),
-                child: SingleChildScrollView(
+            builder: (BuildContext context, StateSetter setStateDialog) {
+          return Dialog(
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
                   child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  // العنوان
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(24),
+                      color: pagColor,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(16),
+                      ),
                     ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // العنوان
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          decoration: BoxDecoration(
-                            color: pagColor,
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(16),
-                            ),
-                          ),
-                          child: Column(
-                            children: const [
-                              Icon(Icons.sort, color: Colors.white, size: 28),
-                              Text(
-                                'ترتيب العناصر',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
+                      children: const [
+                        Icon(Icons.sort, color: Colors.white, size: 28),
+                        Text(
+                          'ترتيب العناصر',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-
-                        // خيارات الترتيب
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8, horizontal: 6),
-                          child: Wrap(
-                            spacing: 8.0,
-                            runSpacing: 12.0,
-                            alignment: WrapAlignment.spaceEvenly,
-                            children: [
-                              _buildSortOption(
-                                context,
-                                title: 'الاسم',
-                                icon: Icons.sort_by_alpha,
-                                isActive: tempSortBy == 'name_asc',
-                                onTap: () => setStateDialog(
-                                    () => tempSortBy = 'name_asc'),
-                              ),
-                              _buildSortOption(
-                                context,
-                                title: 'الأحدث',
-                                icon: Icons.schedule,
-                                isActive: tempSortBy == 'newest',
-                                onTap: () =>
-                                    setStateDialog(() => tempSortBy = 'newest'),
-                              ),
-                              _buildSortOption(
-                                context,
-                                title: '↑المستحق',
-                                icon: Icons.trending_up,
-                                isActive: tempSortBy == 'debt_desc',
-                                onTap: () => setStateDialog(
-                                    () => tempSortBy = 'debt_desc'),
-                              ),
-                              _buildSortOption(
-                                context,
-                                title: '↑ديون / قروض',
-                                icon: Icons.stacked_line_chart,
-                                isActive: tempSortBy == 'additions_desc',
-                                onTap: () => setStateDialog(
-                                    () => tempSortBy = 'additions_desc'),
-                              ),
-                              _buildSortOption(
-                                context,
-                                title: 'الافتراضي',
-                                icon: Icons.restore,
-                                isActive: tempSortBy == 'default',
-                                onTap: () => setStateDialog(
-                                    () => tempSortBy = 'default'),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 12.0),
-
-                        // الأزرار
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _buildActionButton(
-                                  label: 'إغلاق',
-                                  icon: Icons.close,
-                                  color: Colors.red.shade600,
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(
-                                child: _buildActionButton(
-                                  label: 'حفظ',
-                                  icon: Icons.check,
-                                  color: Colors.green.shade600,
-                                  onPressed: () {
-                                    setState(() {
-                                      _sortBy = tempSortBy;
-                                      _applySorting();
-                                    });
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12.0),
                       ],
                     ),
                   ),
-                ),
-              ),
-            );
-          },
-        );
+
+                  _buildSortOptionRadio(
+                      title: 'الاسم',
+                      icon: Icons.sort_by_alpha,
+                      value: 'name_asc',
+                      isActive: tempSortBy == 'name_asc',
+                      onChanged: () {
+                        setState(() {
+                          _sortBy = 'name_asc';
+                          _applySorting();
+                        });
+                        Navigator.pop(context);
+                      }),
+                  _buildSortOptionRadio(
+                      title: 'الأحدث',
+                      icon: Icons.schedule,
+                      value: 'newest',
+                      isActive: tempSortBy == 'newest',
+                      onChanged: () {
+                        setState(() {
+                          _sortBy = 'newest';
+                          _applySorting();
+                        });
+                        Navigator.pop(context);
+                      }),
+
+                  _buildSortOptionRadio(
+                      title: '↑المستحق',
+                      icon: Icons.trending_up,
+                      value: 'debt_desc',
+                      isActive: tempSortBy == 'debt_desc',
+                      onChanged: () {
+                        setState(() {
+                          _sortBy = 'debt_desc';
+                          _applySorting();
+                        });
+                        Navigator.pop(context);
+                      }),
+                  _buildSortOptionRadio(
+                      title: '↑ديون / قروض',
+                      icon: Icons.stacked_line_chart,
+                      value: 'additions_desc',
+                      isActive: tempSortBy == 'additions_desc',
+                      onChanged: () {
+                        setState(() {
+                          _sortBy = 'additions_desc';
+                          _applySorting();
+                        });
+                        Navigator.pop(context);
+                      }),
+
+                  _buildSortOptionRadio(
+                      title: 'الافتراضي',
+                      icon: Icons.restore,
+                      value: 'default',
+                      isActive: tempSortBy == 'default',
+                      onChanged: () {
+                        setState(() {
+                          _sortBy = 'default';
+                          _applySorting();
+                        });
+                        Navigator.pop(context);
+                      }),
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    child: _buildActionButton(
+                      label: 'إغلاق',
+                      icon: Icons.close,
+                      color: pagColor,
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                ]),
+              )));
+        });
       },
     );
+  }
+
+  // دالة مساعدة لإنشاء خيار الفرز باستخدام RadioListTile
+  Widget _buildSortOptionRadio({
+    required String title,
+    required IconData icon,
+    required String value,
+    required bool isActive,
+    required VoidCallback onChanged,
+  }) {
+    return InkWell(
+        onTap: onChanged,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: isActive ? pagColor.withOpacity(0.4) : null,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50),
+                    border: Border.all(color: Colors.white, width: 1)),
+                child: Icon(
+                  icon,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13.5,
+                    color: Colors.black87,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              isActive
+                  ? Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(50),
+                          color: greenTextColor,
+                          border: Border.all(color: Colors.white, width: 1)),
+                      child: const Icon(
+                        Icons.spellcheck,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const SizedBox(),
+            ],
+          ),
+        ));
   }
 
   //  نجاح العملية
@@ -1095,9 +1112,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
               icon,
               size: 16,
               color: Colors.white,
-              weight: 800,
-              opticalSize: 60,
-              grade: 200,
             ),
           ),
           const SizedBox(width: 8),
@@ -1161,64 +1175,6 @@ class _AddDeletePageState extends State<AddDeletePage> {
           ),
         ],
       ),
-    );
-  }
-
-  //  انشا ايقونات الترتيب
-  Widget _buildSortOption(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        width: 100, // ثبات العرض لأفضل توزيع في Wrap
-        padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 3),
-        decoration: BoxDecoration(
-          color: isActive ? pagColor : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? Colors.black26 : pagColor,
-            width: 1,
-          ),
-          boxShadow: isActive
-              ? [
-                  const BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
-                ]
-              : [],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.white : pagColor,
-              size: 28,
-              weight: 800,
-              opticalSize: 60,
-              grade: 200,
-            ),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 14,
-                color: isActive ? Colors.white : pagColor,
-              ),
-            ),
-          ],
-        ),
-      ),
-      // )
     );
   }
 
@@ -1433,7 +1389,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                         Expanded(
                                           child: _buildActionButton(
                                             label: 'حفظ',
-                                            icon: Icons.save_as_outlined,
+                                            icon: Icons.save_outlined,
                                             color: Colors.green,
                                             onPressed: () {
                                               double? amount = double.tryParse(
@@ -1453,13 +1409,15 @@ class _AddDeletePageState extends State<AddDeletePage> {
                                                   'تسديد') {
                                                 _showConfirmDailySaveDialog(
                                                     (bool saveInDaily) {
-                                                  _saveTransactionToDatabase(id,
+                                                  _saveTransactionToDatabase(
+                                                      id, amount,
                                                       name: name,
                                                       saveInDaily: saveInDaily);
                                                 });
                                                 return;
                                               }
-                                              _saveTransactionToDatabase(id);
+                                              _saveTransactionToDatabase(
+                                                  id, amount);
                                             },
                                           ),
                                         ),
@@ -1515,17 +1473,13 @@ class _AddDeletePageState extends State<AddDeletePage> {
   }
 
   //   حفظ العملية في حساب العميل او المورد
-  void _saveTransactionToDatabase(int id,
+  void _saveTransactionToDatabase(int id, dynamic amount,
       {String name = '', bool saveInDaily = true}) async {
-    double? amount = double.tryParse(_phoneController.text.trim());
     String details = _nameController.text.trim();
     final typetransactionViw =
         _transactionType == 'إضافة' ? ' دين ' : _transactionType;
 
-    if (amount == null || amount <= 0) {
-      _showErrorMessage('يرجى اختيار مبلغ صحيح أكبر من 0');
-      return;
-    } else if (details == '') {
+    if (details == '') {
       details =
           'عملية $typetransactionViw  في  ${_dbHelper.getFormattedDate(DateTime.now())}';
     }
@@ -1538,7 +1492,7 @@ class _AddDeletePageState extends State<AddDeletePage> {
             details,
             _transactionType,
           )
-        : await DatabaseHelper().insertAgentOperation(
+        : await _dbHelper.insertAgentOperation(
             id,
             amount,
             details,
@@ -1547,11 +1501,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
 
 // حفظ العملية في الحساب اليومي
     if (_transactionType == 'تسديد' && saveInDaily) {
-      final dbHelper = DatabaseHelper();
       String type = selectedView ? 'كسب' : 'صرف';
       String detailsNum =
-          '${selectedView ? "🙎‍♂️ من العميل" : "🏭 تسديد للمورد "}$name';
-      await dbHelper.insertDailyTransaction(amount, detailsNum, type);
+          '${selectedView ? "🙎‍♂️ من العميل" : "🏭 تسديد للمورد "} : $name';
+      await _dbHelper.insertDailyTransaction(amount, detailsNum, type);
     }
 
     _nameController.clear();
@@ -1560,9 +1513,10 @@ class _AddDeletePageState extends State<AddDeletePage> {
     if (!mounted) return;
 
     Navigator.pop(context);
-    selectedView ? _loadCustomers() : _loadAgents();
+    selectedView ? _loadCustomers(opr: true) : _loadAgents(opr: true);
 
     _showSuccessMessage('تم حفظ العملية بنجاح');
+    preparingCustomersData();
   }
 
   // دالة مساعدة لإنشاء أزرار نوع العملية
@@ -1608,135 +1562,194 @@ class _AddDeletePageState extends State<AddDeletePage> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-        textDirection: TextDirection.rtl,
-        child: Scaffold(
-            backgroundColor: Colors.cyan.shade400,
-            resizeToAvoidBottomInset: false,
-            appBar: CustomAppBar(
-              title: ' إدارة الحسابات   ',
-              colorTitle: pagColor,
-              onBackPress: () => Navigator.pop(context),
-              onIcon1Press: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddTransactionPage(),
-                  ),
-                );
-              },
-              icon1Press: Icons.account_balance_wallet,
-              color1Press: const Color(0xFFFF9800),
-              onIcon2Press: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SearchClientPage(),
-                  ),
-                );
-              },
-              icon2Press: Icons.receipt_long,
-              color2Press: const Color(0xFF07BEAC),
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
+        backgroundColor: Colors.cyan.shade400,
+        resizeToAvoidBottomInset: false,
+        appBar: CustomAppBar(
+          title: ' إدارة الحسابات   ',
+          colorTitle: pagColor,
+          onBackPress: () => Navigator.pop(context),
+          onIcon1Press: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddTransactionPage(),
+              ),
+            );
+          },
+          icon1Press: Icons.account_balance_wallet,
+          color1Press: const Color(0xFFFF9800),
+          onIcon2Press: () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SearchClientPage(),
+              ),
+            );
+          },
+          icon2Press: Icons.receipt_long,
+          color2Press: const Color(0xFF07BEAC),
+        ),
+        drawer: Drawer(
+            child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.cyan.shade900,
+                Colors.cyan.shade800,
+                Colors.cyan.shade700,
+              ],
             ),
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Colors.blue.shade600,
-                    Colors.green.shade500,
-                    Colors.blue.shade500,
-                    Colors.green.shade500,
+          ),
+          child: Column(
+            children: [
+              // اسم التطبيق مع زر الإغلاق
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 40, 16, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'حساباتي', // اسم التطبيق
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        color: Colors.redAccent,
+                        size: 30,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
               ),
-              child: Column(
-                children: [
-                  // شريط علوي
-                  TabBarBody(
-                    height: _showBars ? 55 : 0,
-                    showSearchField: _showSearchField,
-                    onBackPress: () => {
-                      if (!selectedView) _handlePageNavigation(true),
-                    },
-                    color1Press: selectedView
-                        ? primaryColorCustomer
-                        : const Color(0xABFFFFFF),
-                    color1PressChildrn:
-                        selectedView ? Colors.white : Colors.grey,
-                    onBack2Press: () => {
-                      if (selectedView) _handlePageNavigation(false),
-                    },
-                    color2Press: !selectedView
-                        ? primaryColorAgen
-                        : const Color(0xABFFFFFF),
-                    color2PressChildrn:
-                        !selectedView ? Colors.white : Colors.grey,
-                    color3Press: pagColor,
-                    onBack3Press: () => _showSortDialog(context),
-                    icon3Press: Icons.sort_by_alpha_rounded,
-                    title: '   ترتيب   ',
-                    onBackShears: () {
-                      setState(() {
-                        _showSearchField = !_showSearchField;
-                        _searchQuery = '';
-                      });
-                    },
-                    onSearchChanged: (val) {
-                      setState(() {
-                        _searchQuery = val;
-                      });
-                    },
-                    searchQuery: _searchQuery,
-                  ),
-
-                  Expanded(
-                    child: PageView(
-                      controller: _pageController,
-                      onPageChanged: (index) {
-                        showHandl();
-                      },
-                      children: [
-                        _buildTableCustomers(),
-                        _buildTableAgents(),
-                      ],
-                    ),
-                  ),
-                ],
+              // خط فاصل أسفل اسم التطبيق
+              const Divider(
+                color: Colors.white,
+                thickness: 3.5,
+                height: 0,
               ),
+              const SizedBox(height: 20),
+              const Icon(
+                Icons.settings,
+                size: 30,
+                color: Colors.white,
+              ),
+              const Center(
+                child: Text(
+                  'ادارة الحسابات',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                  ),
+                ),
+              )
+            ],
+          ),
+        )),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                Colors.blue.shade600,
+                Colors.green.shade500,
+                Colors.blue.shade500,
+                Colors.green.shade500,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            floatingActionButtonLocation:
-                FloatingActionButtonLocation.centerDocked,
-            floatingActionButton: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 100),
-              child: _showBars
-                  ? FloatingActionButton(
-                      backgroundColor: selectedView
-                          ? primaryColorCustomer
-                          : primaryColorAgen,
-                      onPressed: () => _showAddAccountDialog(),
-                      elevation: 4,
-                      child:
-                          const Icon(Icons.add, color: Colors.white, size: 30),
-                    )
-                  : null,
-            ),
-            bottomNavigationBar: ActionButtonL(
-              showBars: _showBars,
-              icon1Press: Icons.search_outlined,
-              color1Press:
-                  selectedView ? primaryColorCustomer : primaryColorAgen,
-              onIcon1Press: () {
-                setState(() {
-                  _showSearchField = !_showSearchField;
-                  _searchQuery = '';
-                });
-              },
-              icon2Press: Icons.info_outline,
-              color2Press:
-                  selectedView ? primaryColorCustomer : primaryColorAgen,
-              onIcon2Press: _showTotalSummaryDialog,
-            )));
+          ),
+          child: Column(
+            children: [
+              // شريط علوي
+              TabBarBody(
+                height: _showBars ? 55 : 0,
+                showSearchField: _showSearchField,
+                onBackPress: () => {
+                  if (!selectedView) _handlePageNavigation(true),
+                },
+                color1Press: selectedView
+                    ? primaryColorCustomer
+                    : const Color(0xABFFFFFF),
+                color1PressChildrn: selectedView ? Colors.white : Colors.grey,
+                onBack2Press: () => {
+                  if (selectedView) _handlePageNavigation(false),
+                },
+                color2Press:
+                    !selectedView ? primaryColorAgen : const Color(0xABFFFFFF),
+                color2PressChildrn: !selectedView ? Colors.white : Colors.grey,
+                color3Press: pagColor,
+                onBack3Press: () => _showSortDialog(context),
+                icon3Press: Icons.sort_by_alpha_rounded,
+                title: '   ترتيب   ',
+                onBackShears: () {
+                  setState(() {
+                    _showSearchField = !_showSearchField;
+                    _searchQuery = '';
+                  });
+                },
+                onSearchChanged: (val) {
+                  setState(() {
+                    _searchQuery = val;
+                  });
+                },
+                searchQuery: _searchQuery,
+              ),
+
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    showHandl();
+                  },
+                  children: [
+                    _buildTableCustomers(),
+                    _buildTableAgents(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        floatingActionButton: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 100),
+          child: _showBars
+              ? FloatingActionButton(
+                  backgroundColor:
+                      selectedView ? primaryColorCustomer : primaryColorAgen,
+                  onPressed: () => _showAddAccountDialog(),
+                  elevation: 4,
+                  child: const Icon(Icons.add, color: Colors.white, size: 30),
+                )
+              : null,
+        ),
+        bottomNavigationBar: ActionButtonL(
+          showBars: _showBars,
+          icon1Press: Icons.search_outlined,
+          color1Press: selectedView ? primaryColorCustomer : primaryColorAgen,
+          onIcon1Press: () {
+            setState(() {
+              _showSearchField = !_showSearchField;
+              _searchQuery = '';
+            });
+          },
+          icon2Press: Icons.info_outline,
+          color2Press: selectedView ? primaryColorCustomer : primaryColorAgen,
+          onIcon2Press: _showTotalSummaryDialog,
+        ),
+      ),
+    );
   }
 }
 
